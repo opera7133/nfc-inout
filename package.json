@@ -1,0 +1,21 @@
+{
+  "name": "nfc-inout",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/main.js",
+  "scripts": {
+    "dev": "electron .",
+    "start": "node src/main.js"
+  },
+  "keywords": [],
+  "author": "wamo <ainznino@pm.me>",
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.0.3",
+    "nfc-pcsc": "^0.8.1"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^3.2.10",
+    "electron": "^22.0.1"
+  }
+}
