@@ -17,6 +17,7 @@ module.exports = {
     'node_modules',
     'src',
     'main.js',
+    '.env',
     'package-lock.json',
     'package.json',
   ],
