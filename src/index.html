@@ -13,8 +13,17 @@
 <body>
   <h1 id="main">待機中です...</h1>
   <button type="button" class="btn btn-primary" onclick="node.doRegister()">登録を行う</button>
+  <button type="button" class="btn btn-danger" onclick="node.reset()">カードをリセット</button>
+  <div class="alert alert-warning" role="alert" style="margin-top: 1rem;" id="warn" hidden>
+    5秒以内にカードをかざしてください。
+  </div>
+  <div class="alert alert-danger" role="alert" style="margin-top: 1rem;" id="alert" hidden>
+    エラーが発生しました。
+  </div>
   <script type="text/javascript">
     node.auth()
+    node.end()
+    node.callback()
   </script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 </body>

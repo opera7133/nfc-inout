@@ -1,21 +1,25 @@
 {
   "name": "nfc-inout",
   "version": "1.0.0",
-  "description": "",
+  "description": "Manage entry/exit with Felica and Electron",
   "main": "src/main.js",
   "scripts": {
     "dev": "electron .",
-    "start": "node src/main.js"
+    "build:win": "electron-builder --config builder.config.js --publish never --win",
+    "build:linux": "electron-builder --config builder.config.js --publish never --linux"
   },
-  "keywords": [],
   "author": "wamo <ainznino@pm.me>",
   "license": "MIT",
   "dependencies": {
+    "axios": "^1.2.2",
     "dotenv": "^16.0.3",
-    "nfc-pcsc": "^0.8.1"
+    "mysql2": "^3.0.1",
+    "nfc-pcsc": "^0.8.1",
+    "ulid": "^2.3.0"
   },
   "devDependencies": {
     "@electron/rebuild": "^3.2.10",
-    "electron": "^22.0.1"
+    "electron": "^22.0.1",
+    "electron-builder": "^23.6.0"
   }
 }
