@@ -32,21 +32,10 @@ module.exports = {
   },
   linux: {
     icon: 'src/assets/images/logo.icns',
-    target: [
-      { target: 'appImage', arch: ['x64'] },
-      {
-        target: 'deb',
-        arch: ['x64'],
-      },
-    ],
+    target: [{ target: 'appImage', arch: ['x64'] }],
   },
   appImage: {
-    artifactName: '${productName}_${version}_${arch}.${ext}',
-    category: 'Utility',
-    synopsis: 'nfc-inout ${version}',
-  },
-  deb: {
-    artifactName: '${productName}_${version}_${arch}.${ext}',
+    artifactName: '${productName}.${ext}',
     category: 'Utility',
     synopsis: 'nfc-inout ${version}',
   },
