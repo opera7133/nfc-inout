@@ -41,15 +41,15 @@ function createWindow() {
 // 暗号化
 function encrypt(text) {
   const encryptalgo = crypto.createCipheriv('aes-256-cbc', key, iv)
-  let encrypted = encryptalgo.update(text, 'utf8', 'hex')
-  encrypted += encryptalgo.final('hex')
+  let encrypted = encryptalgo.update(text, 'utf8', 'base64')
+  encrypted += encryptalgo.final('base64')
   return encrypted
 }
 
 // 復号
 function decrypt(encrypted) {
   const decryptalgo = crypto.createDecipheriv('aes-256-cbc', key, iv)
-  let decrypted = decryptalgo.update(encrypted, 'hex', 'utf-8')
+  let decrypted = decryptalgo.update(encrypted, 'base64', 'utf-8')
   decrypted += decryptalgo.final('utf-8')
   return decrypted
 }
@@ -146,7 +146,7 @@ app.whenReady().then(() => {
     reader.on('card', async (card) => {
       try {
         if (mode === 'register') {
-          if (byteSize(registerName) > 32) {
+          if (byteSize(registerName) > 48) {
             throw new Error('Name is too long')
           }
           if (Buffer.compare(await reader.read(0, 16, 16), zeroBuf) !== 0) {

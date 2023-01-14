@@ -27,7 +27,7 @@
     登録中にエラーが発生しました。
   </div>
   <div class="alert alert-danger" role="alert" style="margin-top: 1rem;" id="toolong" hidden>
-    名前は32バイト以下にしてください。
+    名前は48バイト以下にしてください。
   </div>
   <script>
     const byteSize = (str) => new Blob([str]).size
@@ -36,7 +36,7 @@
     form.addEventListener('submit', (e) => {
       e.preventDefault();
       const name = document.getElementById("name").value;
-      if (byteSize(name) > 32) {
+      if (byteSize(name) > 48) {
         document.getElementById("toolong").removeAttribute("hidden")
       } else {
         document.getElementById("toolong").setAttribute("hidden", "")
