@@ -91,6 +91,10 @@ async function controlDB(type, data) {
   }
 }
 
+// データの読み取り
+// resetでデータの削除を行うため分離
+// 引数：reader
+// 結果：{ id: 個別ID, data: [名前], db: { id: 個別ID, name: 暗号化名前 } }
 async function readAndAuth(reader) {
   let spid = ''
   let encrypted = ''
