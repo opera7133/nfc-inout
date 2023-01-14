@@ -1,10 +1,11 @@
 {
   "name": "nfc-inout",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Manage entry/exit with Felica and Electron",
   "main": "src/main.js",
   "scripts": {
     "dev": "electron .",
+    "build": "electron-builder --config builder.config.js --publish never",
     "build:win": "electron-builder --config builder.config.js --publish never --win",
     "build:linux": "electron-builder --config builder.config.js --publish never --linux"
   },
