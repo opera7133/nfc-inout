@@ -57,4 +57,13 @@ contextBridge.exposeInMainWorld('node', {
       }, 5000)
     })
   },
+  debug: (sw) => {
+    if (sw) {
+      ipcRenderer.on('debug', (e, data) => {
+        document.getElementById('console').value = data
+      })
+    } else {
+      ipcRenderer.removeAllListeners('debug')
+    }
+  },
 })

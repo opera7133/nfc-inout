@@ -10,7 +10,7 @@ const mysql = require('mysql2/promise')
 const axios = require('axios')
 const sound = require('sound-play')
 
-require('dotenv').config({ path: __dirname + '/../.env' })
+require('dotenv').config({ path: __dirname + '/../.env.local' })
 
 let win
 let mode = 'read'
@@ -64,27 +64,28 @@ async function controlDB(type, data) {
   const connection = await mysql.createConnection(process.env.DATABASE_URL)
   if (type === 'register') {
     const res = await connection.query(
-      'INSERT INTO users (id, name, state) VALUES (?, ?, ?)',
-      [data.id, data.name, data.state]
+      'INSERT INTO users (id, name, state, idm) VALUES (?, ?, ?, ?)',
+      [data.id, data.name, data.state, data.idm]
     )
     connection.end()
     return res.affectedRows == 1
   } else if (type === 'update') {
     const res = await connection.query(
-      'UPDATE users SET state = ? WHERE id = ?',
-      [data.state, data.id]
+      'UPDATE users SET state = ? WHERE id = ? AND idm = ?',
+      [data.state, data.id, data.idm]
     )
     connection.end()
     return res.affectedRows == 1
   } else if (type === 'delete') {
-    const res = await connection.query('DELETE FROM users WHERE id = ?', [
-      data.id,
-    ])
+    const res = await connection.query(
+      'DELETE FROM users WHERE id = ? AND idm = ?',
+      [data.id, data.idm]
+    )
     connection.end()
     return res.affectedRows == 1
   } else {
-    const rows = await connection.query(`SELECT * FROM users WHERE name = ?`, [
-      data.name,
+    const rows = await connection.query(`SELECT * FROM users WHERE idm = ?`, [
+      data.idm,
     ])
     connection.end()
     return rows[0]
@@ -95,7 +96,7 @@ async function controlDB(type, data) {
 // resetでデータの削除を行うため分離
 // 引数：reader
 // 結果：{ id: 個別ID, data: [名前], db: { id: 個別ID, name: 暗号化名前 } }
-async function readAndAuth(reader) {
+async function readAndAuth(reader, card) {
   let spid = ''
   let encrypted = ''
   let data = []
@@ -133,8 +134,12 @@ async function readAndAuth(reader) {
     dataTemp[0].toString().replace(/\0/g, '') +
     dataTemp[1].toString().replace(/\0/g, '')
 
-  const dbdt = await controlDB('read', { id: spid, name: encrypted })
-  return { id: spid, data: data, db: dbdt }
+  const dbdt = await controlDB('read', { idm: card.uid })
+  win.webContents.send(
+    'debug',
+    `id: ${spid}\nidm: ${card.uid}\ndata: ${data[0]}\nstate: ${dbdt[0].state}`
+  )
+  return { id: spid, idm: card.uid, data: data, db: dbdt }
 }
 
 app.whenReady().then(() => {
@@ -184,12 +189,17 @@ app.whenReady().then(() => {
             block++
           }
           sound.play(path.join(__dirname, 'success.mp3'))
-          controlDB('register', { id: spid, name: encrypt(text[0]), state: 1 })
+          controlDB('register', {
+            id: spid,
+            name: encrypt(text[0]),
+            state: 1,
+            idm: card.uid,
+          })
           const post = await axios.post(
             process.env.DISCORD_WEBHOOK,
             {
               username: '入退室管理',
-              content: `🆕 ${text[0]}さんが登録されました`,
+              content: `🆕 ${text[0]}さんを登録しました`,
             },
             {
               headers: {
@@ -202,9 +212,15 @@ app.whenReady().then(() => {
           mode = 'read'
         } else if (mode === 'reset') {
           sound.play(path.join(__dirname, 'success.mp3'))
-          const old = await readAndAuth(reader)
-          if (old.data[0] && old.id && old.db[0] && old.db[0].id === old.id) {
-            controlDB('delete', { id: old.id })
+          const old = await readAndAuth(reader, card)
+          if (
+            old.data[0] &&
+            old.id &&
+            old.db[0] &&
+            old.db[0].id === old.id &&
+            old.db[0].idm === card.uid
+          ) {
+            controlDB('delete', { id: old.id, idm: card.uid })
             const post = await axios.post(
               process.env.DISCORD_WEBHOOK,
               {
@@ -227,12 +243,18 @@ app.whenReady().then(() => {
             mode = 'read'
           }
         } else {
-          const res = await readAndAuth(reader)
-          if (res.data[0] && res.id && res.db[0].id === res.id) {
+          const res = await readAndAuth(reader, card)
+          if (
+            res.data[0] &&
+            res.id &&
+            res.db[0].id === res.id &&
+            res.db[0].idm === res.idm
+          ) {
             win.webContents.send('auth', { data: res.data })
             sound.play(sound.play(path.join(__dirname, 'success.mp3')))
             controlDB('update', {
               id: res.id,
+              idm: res.idm,
               state: res.db[0].state === 0 ? 1 : 0,
             })
             const post = await axios.post(
@@ -250,7 +272,11 @@ app.whenReady().then(() => {
                 },
               }
             )
-          } else if (res.data[0] && res.id && res.db[0].id !== res.id) {
+          } else if (
+            res.data[0] &&
+            res.id &&
+            (res.db[0].id !== res.id || res.db[0].idm !== res.idm)
+          ) {
             throw new Error('User ID does not match')
           }
         }
