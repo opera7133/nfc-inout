@@ -27,8 +27,6 @@ contextBridge.exposeInMainWorld('node', {
         document.getElementById('alert').setAttribute('hidden', '')
         ipcRenderer.invoke('back')
       } else {
-        const sound = new Audio('./error.mp3')
-        sound.play()
         document.getElementById('info').setAttribute('hidden', '')
         document.getElementById('alert').removeAttribute('hidden')
       }
@@ -52,8 +50,6 @@ contextBridge.exposeInMainWorld('node', {
   },
   auth: (data) => {
     ipcRenderer.on('auth', (e, data) => {
-      const sound = new Audio('./success.mp3')
-      sound.play()
       document.getElementById('main').textContent =
         '認証しました：' + data.data[0]
       setTimeout(() => {

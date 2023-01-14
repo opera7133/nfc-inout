@@ -8,6 +8,7 @@ const { Blob } = require('buffer')
 const ULID = require('ulid')
 const mysql = require('mysql2/promise')
 const axios = require('axios')
+const sound = require('sound-play')
 
 require('dotenv').config({ path: __dirname + '/../.env' })
 
@@ -178,13 +179,41 @@ app.whenReady().then(() => {
             await reader.write(12 + j, data, 16)
             block++
           }
+          sound.play(path.join(__dirname, 'success.mp3'))
           controlDB('register', { id: spid, name: encrypt(text[0]), state: 1 })
+          const post = await axios.post(
+            process.env.DISCORD_WEBHOOK,
+            {
+              username: '入退室管理',
+              content: `🆕 ${text[0]}さんが登録されました`,
+            },
+            {
+              headers: {
+                Accept: 'application/json',
+                'Content-type': 'application/json',
+              },
+            }
+          )
           win.webContents.send('callback', true)
           mode = 'read'
         } else if (mode === 'reset') {
+          sound.play(path.join(__dirname, 'success.mp3'))
           const old = await readAndAuth(reader)
-          if (old.data[0] && old.id && old.db[0].id === old.id) {
+          if (old.data[0] && old.id && old.db[0] && old.db[0].id === old.id) {
             controlDB('delete', { id: old.id })
+            const post = await axios.post(
+              process.env.DISCORD_WEBHOOK,
+              {
+                username: '入退室管理',
+                content: `❌ ${old.data[0]}さんの登録を解除しました`,
+              },
+              {
+                headers: {
+                  Accept: 'application/json',
+                  'Content-type': 'application/json',
+                },
+              }
+            )
           }
           const data = Buffer.allocUnsafe(16)
           for (let i = 0; i < 14; i++) {
@@ -197,6 +226,7 @@ app.whenReady().then(() => {
           const res = await readAndAuth(reader)
           if (res.data[0] && res.id && res.db[0].id === res.id) {
             win.webContents.send('auth', { data: res.data })
+            sound.play(sound.play(path.join(__dirname, 'success.mp3')))
             controlDB('update', {
               id: res.id,
               state: res.db[0].state === 0 ? 1 : 0,
@@ -205,7 +235,7 @@ app.whenReady().then(() => {
               process.env.DISCORD_WEBHOOK,
               {
                 username: '入退室管理',
-                content: `🚪${res.data[0]}さんが${
+                content: `🚪 ${res.data[0]}さんが${
                   res.db[0].state === 0 ? '入室' : '退室'
                 }しました`,
               },
@@ -222,6 +252,7 @@ app.whenReady().then(() => {
         }
       } catch (err) {
         console.error(`error`, err)
+        sound.play(path.join(__dirname, 'error.mp3'))
         win.webContents.send('callback', false)
         mode = 'read'
       }
