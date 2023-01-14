@@ -10,7 +10,7 @@ const mysql = require('mysql2/promise')
 const axios = require('axios')
 const sound = require('sound-play')
 
-require('dotenv').config({ path: __dirname + '/../.env.local' })
+require('dotenv').config({ path: __dirname + '/../.env' })
 
 let win
 let mode = 'read'
