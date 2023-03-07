@@ -1,27 +1,172 @@
 'use strict'
 
-const { app, BrowserWindow, ipcMain } = require('electron')
+const { app, dialog, BrowserWindow, ipcMain } = require('electron')
 const { NFC } = require('nfc-pcsc')
-const crypto = require('crypto')
 const path = require('path')
-const { Blob } = require('buffer')
+const fs = require('fs')
 const ULID = require('ulid')
-const mysql = require('mysql2/promise')
 const axios = require('axios')
 const sound = require('sound-play')
+const { Sequelize, DataTypes } = require('sequelize')
+const fastify = require('fastify')()
 
 require('dotenv').config({ path: __dirname + '/../.env' })
 
+// ウィンドウ、モード切替、登録時の一時変数
 let win
 let mode = 'read'
-let registerName = ''
-const zeroBuf = Buffer.alloc(16)
+let registerData = {
+  type: 'create',
+  name: '',
+  id: '',
+}
 
+// NFC
 const nfc = new NFC()
-const byteSize = (str) => new Blob([str]).size
-const key = crypto.scryptSync(process.env.CRYPT_KEY, process.env.CRYPT_SALT, 32)
-const iv = Buffer.alloc(16)
-iv.write(process.env.CRYPT_KEY)
+
+// 設定の保存
+const Store = require('electron-store')
+const store = new Store()
+
+// ORMの構成
+const sequelize = new Sequelize(process.env.DATABASE_URL)
+const User = sequelize.define(
+  'users',
+  {
+    id: {
+      type: DataTypes.STRING(26),
+      allowNull: false,
+      primaryKey: true,
+    },
+    name: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    state: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
+      allowNull: false,
+    },
+    last: {
+      type: DataTypes.DATE,
+    },
+  },
+  {}
+)
+
+const Card = sequelize.define(
+  'cards',
+  {
+    id: {
+      type: DataTypes.STRING(26),
+      allowNull: false,
+      primaryKey: true,
+    },
+    idm: {
+      type: DataTypes.STRING(16),
+      allowNull: false,
+    },
+    userId: {
+      type: DataTypes.STRING(26),
+      allowNull: false,
+    },
+  },
+  {}
+)
+
+User.hasMany(Card, { foreignKey: 'userId' })
+Card.belongsTo(User)
+
+// ウェブコンソール
+fastify.register(require('@fastify/view'), {
+  engine: {
+    ejs: require('ejs'),
+  },
+})
+fastify.register(require('@fastify/static'), {
+  root: path.join(__dirname, 'public'),
+  prefix: '/public/',
+})
+fastify.register(require('@fastify/basic-auth'), {
+  validate,
+  authenticate: true,
+})
+
+function validate(username, password, req, reply, done) {
+  if (
+    username === process.env.BASIC_AUTH_USER &&
+    password === process.env.BASIC_AUTH_PASSWORD
+  ) {
+    done()
+  } else {
+    done(new Error('Winter is coming'))
+  }
+}
+fastify.after(() => {
+  if (process.env.BASIC_AUTH_USER && process.env.BASIC_AUTH_PASSWORD) {
+    fastify.addHook('onRequest', fastify.basicAuth)
+  }
+  fastify.get('/', async (req, reply) => {
+    const users = await User.findAll({ raw: true })
+    await reply.view('/src/views/index.ejs', { users: users })
+  })
+  fastify.get('/favicon.ico', async (req, reply) => {
+    await reply.sendFile('favicon.ico')
+  })
+})
+
+const start = async () => {
+  try {
+    await fastify.listen({ port: 3060, host: '0.0.0.0' })
+  } catch (err) {
+    fastify.log.error(err)
+    process.exit(1)
+  }
+}
+
+// Discordのメッセージ送信
+const sendDiscord = async (content) => {
+  if (process.env.DISCORD_WEBHOOK) {
+    const post = await axios.post(
+      process.env.DISCORD_WEBHOOK,
+      {
+        username: '入退室管理',
+        content: content,
+      },
+      {
+        headers: {
+          Accept: 'application/json',
+          'Content-type': 'application/json',
+        },
+      }
+    )
+  }
+}
+
+// LINEのメッセージ送信
+const sendLine = async (content) => {
+  if (process.env.LINE_ACCESS_TOKEN && process.env.LINE_USER_ID) {
+    const post = await axios.post(
+      process.env.DISCORD_WEBHOOK,
+      {
+        to: process.env.LINE_USER_ID,
+        messages: [
+          {
+            type: 'text',
+            text: content,
+          },
+        ],
+      },
+      {
+        headers: {
+          Accept: 'application/json',
+          'Content-type': 'application/json',
+          Authorization: `Bearer ${process.env.LINE_ACCESS_TOKEN}`,
+        },
+      }
+    )
+  }
+}
 
 // ウィンドウ初期化
 function createWindow() {
@@ -30,6 +175,7 @@ function createWindow() {
     autoHideMenuBar: true,
     width: 800,
     height: 600,
+    icon: path.join(__dirname, 'assets/icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
     },
@@ -38,112 +184,13 @@ function createWindow() {
   win.loadFile(path.join(__dirname, 'index.html'))
 }
 
-// 暗号化
-function encrypt(text) {
-  const encryptalgo = crypto.createCipheriv('aes-256-cbc', key, iv)
-  let encrypted = encryptalgo.update(text, 'utf8', 'base64')
-  encrypted += encryptalgo.final('base64')
-  return encrypted
-}
-
-// 復号
-function decrypt(encrypted) {
-  const decryptalgo = crypto.createDecipheriv('aes-256-cbc', key, iv)
-  let decrypted = decryptalgo.update(encrypted, 'base64', 'utf-8')
-  decrypted += decryptalgo.final('utf-8')
-  return decrypted
-}
-
-/* 
-データベースの操作
-
-type: register, update, read, delete
-data: {id, name, state}
-*/
-async function controlDB(type, data) {
-  const connection = await mysql.createConnection(process.env.DATABASE_URL)
-  if (type === 'register') {
-    const res = await connection.query(
-      'INSERT INTO users (id, name, state, idm) VALUES (?, ?, ?, ?)',
-      [data.id, data.name, data.state, data.idm]
-    )
-    connection.end()
-    return res.affectedRows == 1
-  } else if (type === 'update') {
-    const res = await connection.query(
-      'UPDATE users SET state = ? WHERE id = ? AND idm = ?',
-      [data.state, data.id, data.idm]
-    )
-    connection.end()
-    return res.affectedRows == 1
-  } else if (type === 'delete') {
-    const res = await connection.query(
-      'DELETE FROM users WHERE id = ? AND idm = ?',
-      [data.id, data.idm]
-    )
-    connection.end()
-    return res.affectedRows == 1
-  } else {
-    const rows = await connection.query(`SELECT * FROM users WHERE idm = ?`, [
-      data.idm,
-    ])
-    connection.end()
-    return rows[0]
-  }
-}
-
-// データの読み取り
-// resetでデータの削除を行うため分離
-// 引数：reader
-// 結果：{ id: 個別ID, data: [名前], db: { id: 個別ID, name: 暗号化名前 } }
-async function readAndAuth(reader, card) {
-  let spid = ''
-  let encrypted = ''
-  let data = []
-  let dataTemp = []
-  let i = 0
-  dataTemp[0] = await reader.read(0, 16, 16)
-  dataTemp[1] = await reader.read(1, 16, 16)
-  dataTemp[2] = await reader.read(2, 16, 16)
-  dataTemp[3] = await reader.read(3, 16, 16)
-  if (Buffer.compare(dataTemp[0], zeroBuf) !== 0) {
-    encrypted =
-      dataTemp[0].toString().replace(/\0/g, '') +
-      dataTemp[1].toString().replace(/\0/g, '') +
-      dataTemp[2].toString().replace(/\0/g, '') +
-      dataTemp[3].toString().replace(/\0/g, '')
-    data[0] = decrypt(encrypted)
-    i += 4
-  }
-  dataTemp = []
-  while (true) {
-    dataTemp[0] = await reader.read(i, 16, 16)
-    dataTemp[1] = await reader.read(i + 1, 16, 16)
-    if (Buffer.compare(dataTemp[0], zeroBuf) === 0) {
-      break
-    }
-    data[(i - 2) / 2] = decrypt(
-      dataTemp[0].toString().replace(/\0/g, '') +
-        dataTemp[1].toString().replace(/\0/g, '')
-    )
-    i += 2
-  }
-  dataTemp[0] = await reader.read(12, 16, 16)
-  dataTemp[1] = await reader.read(13, 16, 16)
-  spid =
-    dataTemp[0].toString().replace(/\0/g, '') +
-    dataTemp[1].toString().replace(/\0/g, '')
-
-  const dbdt = await controlDB('read', { idm: card.uid })
-  win.webContents.send(
-    'debug',
-    `id: ${spid}\nidm: ${card.uid}\ndata: ${data[0]}\nstate: ${dbdt[0].state}`
-  )
-  return { id: spid, idm: card.uid, data: data, db: dbdt }
-}
-
 app.whenReady().then(() => {
   createWindow()
+  start()
+  ;(async () => {
+    await User.sync({ alter: true })
+    await Card.sync({ alter: true })
+  })()
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
@@ -151,133 +198,63 @@ app.whenReady().then(() => {
     reader.on('card', async (card) => {
       try {
         if (mode === 'register') {
-          if (byteSize(registerName) > 48) {
-            throw new Error('Name is too long')
-          }
-          if (Buffer.compare(await reader.read(0, 16, 16), zeroBuf) !== 0) {
-            throw new Error('Already registred')
-          }
-          const data = Buffer.allocUnsafe(16)
-          for (let i = 0; i < 14; i++) {
-            data.fill(0)
-            await reader.write(i, data, 16)
-          }
-          const text = [registerName]
-          let block = 0
-          for (let i = 0; i < text.length; i++) {
-            let dt = encrypt(text[i])
-            for (let j = 0; j < byteSize(dt) / 16; j++) {
-              data.fill(0)
-              data.write(
-                new TextDecoder().decode(
-                  new TextEncoder().encode(dt).slice(j * 16, j * 16 + 16)
-                )
-              )
-              await reader.write(block, data, 16)
-              block++
-            }
-          }
-          const spid = ULID.ulid()
-          for (let j = 0; j < 2; j++) {
-            data.fill(0)
-            data.write(
-              new TextDecoder().decode(
-                new TextEncoder().encode(spid).slice(j * 16, j * 16 + 16)
-              )
-            )
-            await reader.write(12 + j, data, 16)
-            block++
-          }
           sound.play(path.join(__dirname, 'success.mp3'))
-          controlDB('register', {
-            id: spid,
-            name: encrypt(text[0]),
-            state: 1,
-            idm: card.uid,
-          })
-          const post = await axios.post(
-            process.env.DISCORD_WEBHOOK,
-            {
-              username: '入退室管理',
-              content: `🆕 ${text[0]}さんを登録しました`,
-            },
-            {
-              headers: {
-                Accept: 'application/json',
-                'Content-type': 'application/json',
-              },
-            }
-          )
+          if (registerData.type === 'create') {
+            const newUser = await User.create({
+              id: ULID.ulid(),
+              name: registerData.name,
+              state: true,
+              last: new Date(),
+            })
+            const newCard = await Card.create({
+              id: ULID.ulid(),
+              idm: card.uid,
+              userId: newUser.id,
+            })
+            await sendDiscord(`🆕 ${registerData.name}さんを登録しました`)
+            await sendLine(`🆕 ${registerData.name}さんを登録しました`)
+          } else {
+            const newCard = await Card.create({
+              id: ULID.ulid(),
+              idm: card.uid,
+              userId: registerData.id,
+            })
+          }
           win.webContents.send('callback', true)
           mode = 'read'
         } else if (mode === 'reset') {
           sound.play(path.join(__dirname, 'success.mp3'))
-          const old = await readAndAuth(reader, card)
-          if (
-            old.data[0] &&
-            old.id &&
-            old.db[0] &&
-            old.db[0].id === old.id &&
-            old.db[0].idm === card.uid
-          ) {
-            controlDB('delete', { id: old.id, idm: card.uid })
-            const post = await axios.post(
-              process.env.DISCORD_WEBHOOK,
-              {
-                username: '入退室管理',
-                content: `❌ ${old.data[0]}さんの登録を解除しました`,
-              },
-              {
-                headers: {
-                  Accept: 'application/json',
-                  'Content-type': 'application/json',
-                },
-              }
-            )
+          const deleteCard = await Card.findOne({
+            where: { idm: card.uid },
+          })
+          if (deleteCard) {
+            const deletedCard = await deleteCard.destroy()
           }
-          const data = Buffer.allocUnsafe(16)
-          for (let i = 0; i < 14; i++) {
-            data.fill(0)
-            await reader.write(i, data, 16)
-            win.webContents.send('end')
-            mode = 'read'
-          }
+          win.webContents.send('end')
+          mode = 'read'
         } else {
-          const res = await readAndAuth(reader, card)
-          if (
-            res.data[0] &&
-            res.id &&
-            res.db[0].id === res.id &&
-            res.db[0].idm === res.idm
-          ) {
-            win.webContents.send('auth', { data: res.data })
-            sound.play(sound.play(path.join(__dirname, 'success.mp3')))
-            controlDB('update', {
-              id: res.id,
-              idm: res.idm,
-              state: res.db[0].state === 0 ? 1 : 0,
+          const uid = await Card.findOne({
+            where: { idm: card.uid },
+          }).userId
+          if (uid) {
+            const user = await User.findOne({
+              where: { id: uid },
             })
-            const post = await axios.post(
-              process.env.DISCORD_WEBHOOK,
-              {
-                username: '入退室管理',
-                content: `🚪 ${res.data[0]}さんが${
-                  res.db[0].state === 0 ? '入室' : '退室'
-                }しました`,
-              },
-              {
-                headers: {
-                  Accept: 'application/json',
-                  'Content-type': 'application/json',
-                },
+            if (user) {
+              win.webContents.send('auth', { data: { name: user.name } })
+              sound.play(sound.play(path.join(__dirname, 'success.mp3')))
+              if (!user.state) {
+                user.last = new Date()
               }
-            )
-          } else if (
-            res.data[0] &&
-            res.id &&
-            (res.db[0].id !== res.id || res.db[0].idm !== res.idm)
-          ) {
-            throw new Error('User ID does not match')
+              user.state = data.state
+              const updatedUser = await user.save()
+              await sendDiscord(
+                `🚪 ${user.name}さんが${!user.state ? '入室' : '退室'}しました`
+              )
+              await sendLine(
+                `🚪 ${user.name}さんが${!user.state ? '入室' : '退室'}しました`
+              )
+            }
           }
         }
       } catch (err) {
@@ -298,9 +275,17 @@ ipcMain.handle('doRegister', (e) => {
   win.loadFile(path.join(__dirname, 'register.html'))
 })
 
+ipcMain.handle('showUsers', (e) => {
+  win.loadFile(path.join(__dirname, 'users.html'))
+})
+
 ipcMain.handle('back', (e) => {
   mode = 'read'
-  registerName = ''
+  registerData = {
+    type: 'create',
+    name: '',
+    id: '',
+  }
   win.loadFile(path.join(__dirname, 'index.html'))
 })
 
@@ -311,7 +296,56 @@ ipcMain.handle('reset', (e) => {
   }, 5000)
 })
 
-ipcMain.handle('register', (e, name) => {
+ipcMain.handle('register', (e, type, name) => {
   mode = 'register'
-  registerName = name
+  if (type === 'create') {
+    registerData = {
+      type: 'create',
+      name: name,
+    }
+  } else {
+    registerData = {
+      type: 'update',
+      id: name,
+    }
+  }
+})
+
+ipcMain.handle('changeState', async (e, uid) => {
+  const user = await User.findOne({ where: { id: uid } })
+  if (user.state) {
+    user.last = new Date()
+  }
+  user.state = !user.state
+  await user.save()
+  win.webContents.reloadIgnoringCache()
+})
+
+ipcMain.handle('deleteUser', async (e, uid) => {
+  const select = dialog.showMessageBoxSync({
+    type: 'question',
+    title: 'ユーザーを削除します',
+    message: '本当によろしいですか？',
+    buttons: ['削除', 'キャンセル'],
+    cancelId: 1,
+  })
+  if (select === 0) {
+    const user = await User.findOne({ where: { id: uid } })
+    await User.destroy(user)
+    win.webContents.reloadIgnoringCache()
+    await sendDiscord(`❌ ${user.name}さんを削除しました`)
+    await sendLine(`❌ ${user.name}さんを削除しました`)
+  }
+})
+
+ipcMain.handle('getUsers', async (e) => {
+  const users = await User.findAll({ raw: true })
+  return users
+})
+
+ipcMain.handle('loadSettings', (e) => {
+  return store.get('settings')
+})
+ipcMain.handle('setSettings', (e, data) => {
+  store.set('settings', data)
 })

@@ -3,14 +3,20 @@
 const { contextBridge, ipcRenderer } = require('electron')
 
 contextBridge.exposeInMainWorld('node', {
+  showUsers: () => {
+    ipcRenderer.invoke('showUsers')
+  },
   doRegister: () => {
     ipcRenderer.invoke('doRegister')
   },
-  register: (name) => {
-    ipcRenderer.invoke('register', name)
+  register: (type, name) => {
+    ipcRenderer.invoke('register', type, name)
   },
   back: () => {
     ipcRenderer.invoke('back')
+  },
+  getUsers: async () => {
+    return await ipcRenderer.invoke('getUsers')
   },
   end: () => {
     ipcRenderer.on('end', (e) => {
@@ -50,8 +56,7 @@ contextBridge.exposeInMainWorld('node', {
   },
   auth: (data) => {
     ipcRenderer.on('auth', (e, data) => {
-      document.getElementById('main').textContent =
-        '認証しました：' + data.data[0]
+      document.getElementById('main').textContent = '認証しました：' + data.name
       setTimeout(() => {
         document.getElementById('main').textContent = '待機中です...'
       }, 5000)
@@ -65,5 +70,15 @@ contextBridge.exposeInMainWorld('node', {
     } else {
       ipcRenderer.removeAllListeners('debug')
     }
+    ipcRenderer.invoke('setSettings', { debug: sw })
+  },
+  changeState: (uid) => {
+    ipcRenderer.invoke('changeState', uid)
+  },
+  deleteUser: (uid) => {
+    ipcRenderer.invoke('deleteUser', uid)
+  },
+  loadSettings: async () => {
+    return await ipcRenderer.invoke('loadSettings')
   },
 })

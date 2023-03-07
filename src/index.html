@@ -6,14 +6,15 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>入退室管理システム</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0-alpha1/css/bootstrap.min.css" rel="stylesheet" />
   <link href="styles.css" rel="stylesheet" />
 </head>
 
 <body>
   <h1 id="main">待機中です...</h1>
-  <button type="button" class="btn btn-primary" onclick="node.doRegister()">登録を行う</button>
-  <button type="button" class="btn btn-danger" onclick="node.reset()">カードをリセット</button>
+  <button type="button" class="btn btn-primary" onclick="node.doRegister()">カードを登録</button>
+  <button type="button" class="btn btn-secondary" onclick="node.showUsers()">すべてのユーザーを表示</button>
+  <button type="button" class="btn btn-danger" onclick="node.reset()">登録を解除</button>
   <div class="alert alert-warning" role="alert" style="margin-top: 1rem;" id="warn" hidden>
     5秒以内にカードをかざしてください。
   </div>
@@ -30,11 +31,18 @@
     <label class="form-check-label" for="debug">デバッグモード</label>
   </div>
   <script type="text/javascript">
+    (async () => {
+      const settings = await node.loadSettings()
+      console.log(settings)
+      if (settings && settings.debug) {
+        document.getElementById("debug").checked = true
+        document.getElementById("console-form").removeAttribute("hidden")
+      }
+    })()
     node.auth()
     node.end()
     node.callback()
     function switchDebug(e) {
-      console.log(e.checked)
       node.debug(e.checked)
       if (e.checked) {
         document.getElementById("console-form").removeAttribute("hidden")
@@ -43,7 +51,7 @@
       }
     }
   </script>
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0-alpha1/js/bootstrap.bundle.min.js"></script>
 </body>
 
 </html>

@@ -2,11 +2,11 @@
 
 FelicaとElectronで入退室管理
 
-## Build
+## ビルド
 
-### 1. 成功時と失敗時の効果音の用意
+### 1. 効果音の用意
 
-効果音は `src` フォルダに `success.mp3` と `error.mp3` という名前で保存します。
+効果音を `src` フォルダに `success.mp3` と `error.mp3` という名前で保存します。
 
 ### 2. .envを設定
 
@@ -16,9 +16,15 @@ FelicaとElectronで入退室管理
 
 `npm i`を実行してパッケージをインストールします。
 
-### 4. ビルド
+### 4. 環境変数の設定
+
+`.env.sample`を`.env`にコピーし、設定します。
+
+### 5. ビルド
 
 windows向けにビルドする場合は`npm run build:win`、linux向けは`npm run build:linux`を実行します。
+
+windowsの場合、事前に`./node_modules/.bin/electron-rebuild.cmd`を実行する必要があります。
 
 ## License
 

@@ -27,11 +27,25 @@ module.exports = {
         target: 'portable',
         arch: ['x64'],
       },
+      {
+        target: 'nsis',
+        arch: ['x64'],
+      },
     ],
-    artifactName: '${productName}.${ext}',
+    icon: 'src/assets/img/icon.png',
+    artifactName: '${productName}_setup.${ext}',
+  },
+  nsis: {
+    oneClick: false,
+    allowToChangeInstallationDirectory: true,
+    deleteAppDataOnUninstall: true,
+    uninstallDisplayName: 'NFC入退室管理システム',
+  },
+  portable: {
+    artifactName: '${productName}_portable.${ext}',
   },
   linux: {
-    icon: 'src/assets/images/logo.icns',
+    icon: 'src/assets/img/nfc-inout.icns',
     target: [{ target: 'appImage', arch: ['x64'] }],
   },
   appImage: {
