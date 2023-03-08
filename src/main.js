@@ -37,10 +37,12 @@ const User = sequelize.define(
       type: DataTypes.STRING(26),
       allowNull: false,
       primaryKey: true,
+      unique: true,
     },
     name: {
       type: DataTypes.STRING,
       allowNull: false,
+      unique: true,
     },
     state: {
       type: DataTypes.BOOLEAN,
@@ -61,10 +63,12 @@ const Card = sequelize.define(
       type: DataTypes.STRING(26),
       allowNull: false,
       primaryKey: true,
+      unique: true,
     },
     idm: {
       type: DataTypes.STRING(16),
       allowNull: false,
+      unique: true,
     },
     userId: {
       type: DataTypes.STRING(26),
