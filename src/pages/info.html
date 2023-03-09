@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>このソフトウェアについて</title>
+  <link href="../assets/styles/bootstrap.min.css" rel="stylesheet" />
+  <link href="../assets/styles/main.css" rel="stylesheet" />
+</head>
+
+<body class="position-relative min-vh-100 text-center">
+  <img src="../assets/img/icon.png" width="100" />
+  <h2 class="my-3">nfc-inout</h2>
+  <p class="my-3">v1.2.0</p>
+  <h6 class="my-3">ライセンス情報</h6>
+  <ul class="list-group text-start my-4" style="font-size: 0.8rem;">
+    <li class="list-group-item"><a href="https://github.com/axios/axios">axios</a> by Matt Zabriskie & Collaborators
+    </li>
+    <li class="list-group-item"><a href="https://github.com/twbs/icons">bootstrap-icons</a> by The Bootstrap Authors
+    </li>
+    <li class="list-group-item"><a href="https://github.com/motdotla/dotenv">dotenv</a> by Scott Motte</li>
+    <li class="list-group-item"><a href="https://github.com/mde/ejs">ejs</a> by Matthew Eernisse</li>
+    <li class="list-group-item"><a href="https://github.com/sindresorhus/electron-store">electron-store</a> by Sindre
+      Sorhus</li>
+    <li class="list-group-item"><a href="https://github.com/fastify/fastify">fastify</a> by The Fastify Team</li>
+    <li class="list-group-item"><a href="https://github.com/sidorares/node-mysql2">mysql2</a> by Andrey Sidorov and
+      contributors
+    </li>
+    <li class="list-group-item"><a href="https://github.com/pokusew/nfc-pcsc">nfc-pcsc</a> by Martin Endler</li>
+    <li class="list-group-item"><a href="https://fonts.google.com/noto/specimen/Noto+Sans+JP">Noto Sans JP</a> by Google
+    </li>
+    <li class="list-group-item"><a href="https://github.com/sequelize/sequelize">sequelize</a> by Sequelize Authors</li>
+    <li class="list-group-item"><a href="https://github.com/nomadhoc/sound-play">sound-play</a> by nomadhoc</li>
+    <li class="list-group-item"><a href="https://github.com/ulid/javascript">ulid</a> by Alizain Feerasta</li>
+  </ul>
+  <button type="button" class="d-inline-block ms-auto btn btn-primary px-4" onclick="window.close()">OK</button>
+  <script>
+    (async () => {
+      const settings = await el.loadSettings()
+      if (settings.darkmode || false) {
+        document.documentElement.setAttribute('data-bs-theme', 'dark')
+      }
+    })()
+  </script>
+  <script src="../assets/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>

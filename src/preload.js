@@ -81,8 +81,11 @@ contextBridge.exposeInMainWorld('node', {
   setSettings: async (data) => {
     return await ipcRenderer.invoke('setSettings', data)
   },
-  openSettings: async () => {
+  openSettings: () => {
     ipcRenderer.invoke('openSettings')
+  },
+  openInfo: () => {
+    ipcRenderer.invoke('openInfo')
   },
   loadSettings: async () => {
     return await ipcRenderer.invoke('loadSettings')

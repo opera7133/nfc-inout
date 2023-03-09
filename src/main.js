@@ -1,6 +1,6 @@
 'use strict'
 
-const { app, dialog, BrowserWindow, ipcMain } = require('electron')
+const { app, dialog, BrowserWindow, ipcMain, shell } = require('electron')
 const { NFC } = require('nfc-pcsc')
 const path = require('path')
 const ULID = require('ulid')
@@ -197,6 +197,14 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
     },
   })
+  const handleUrlOpen = (e, url) => {
+    if (url.match(/^http/)) {
+      e.preventDefault()
+      shell.openExternal(url)
+    }
+  }
+  win.webContents.on('will-navigate', handleUrlOpen)
+  win.webContents.on('new-window', handleUrlOpen)
 
   win.loadFile(path.join(__dirname, 'pages', 'index.html'))
 }
@@ -391,6 +399,29 @@ ipcMain.handle('setSettings', (e, data) => {
   } catch (e) {
     return false
   }
+})
+ipcMain.handle('openInfo', (e) => {
+  const informationWindow = new BrowserWindow({
+    parent: win,
+    title: 'このソフトウェアについて',
+    width: 400,
+    height: 500,
+    autoHideMenuBar: true,
+    icon: path.join(__dirname, 'assets/img/icon.png'),
+    webPreferences: {
+      preload: path.join(__dirname, 'preload-settings.js'),
+    },
+    modal: true,
+  })
+  const handleUrlOpen = (e, url) => {
+    if (url.match(/^http/)) {
+      e.preventDefault()
+      shell.openExternal(url)
+    }
+  }
+  informationWindow.webContents.on('will-navigate', handleUrlOpen)
+  informationWindow.webContents.on('new-window', handleUrlOpen)
+  informationWindow.loadFile(path.join(__dirname, 'pages', 'info.html'))
 })
 ipcMain.handle('openSettings', (e) => {
   const settingsWindow = new BrowserWindow({

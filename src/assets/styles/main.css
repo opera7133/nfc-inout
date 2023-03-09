@@ -47,9 +47,31 @@
 .bi-gear-fill::before {
   content: '\f3e2';
 }
+.bi-info-circle::before {
+  content: '\f431';
+}
 
 body {
   font-family: 'Noto Sans JP', 'Helvetica Neue', 'Helvetica', 'Hiragino Sans',
     'Hiragino Kaku Gothic ProN', 'Arial', 'Yu Gothic', 'Meiryo', sans-serif;
   padding: 2rem;
+  --sb-track-color: #232e33;
+  --sb-thumb-color: #1b4b82;
+  --sb-size: 6px;
+
+  scrollbar-color: var(--sb-thumb-color) var(--sb-track-color);
+}
+
+body::-webkit-scrollbar {
+  width: var(--sb-size);
+}
+
+body::-webkit-scrollbar-track {
+  background: var(--sb-track-color);
+  border-radius: 10px;
+}
+
+body::-webkit-scrollbar-thumb {
+  background: var(--sb-thumb-color);
+  border-radius: 10px;
 }
