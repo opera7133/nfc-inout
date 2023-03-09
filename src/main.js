@@ -276,6 +276,16 @@ app.whenReady().then(() => {
           })
           if (deleteCard) {
             const deletedCard = await deleteCard.destroy()
+            await sendDiscord(
+              `❌ ${registerData.name}さんの${
+                deleteCard.name ? deleteCard.name : 'カード'
+              }を削除しました`
+            )
+            await sendLine(
+              `❌ ${registerData.name}さんの${
+                deleteCard.name ? deleteCard.name : 'カード'
+              }を削除しました`
+            )
           }
           win.webContents.send('end')
           mode = 'read'
