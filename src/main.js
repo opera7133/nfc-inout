@@ -27,6 +27,17 @@ const nfc = new NFC()
 const Store = require('electron-store')
 const store = new Store()
 
+if (!store.get('settings')) {
+  store.set('settings', {
+    debug: false,
+    darkmode: false,
+    notify: {
+      discord: true,
+      line: false,
+    },
+  })
+}
+
 // ORMの構成
 const sequelize = new Sequelize(process.env.DATABASE_URL)
 const User = sequelize.define(
@@ -130,7 +141,8 @@ const start = async () => {
 
 // Discordのメッセージ送信
 const sendDiscord = async (content) => {
-  if (process.env.DISCORD_WEBHOOK) {
+  const status = store.get('settings.notify.discord') || false
+  if (process.env.DISCORD_WEBHOOK && status) {
     const post = await axios.post(
       process.env.DISCORD_WEBHOOK,
       {
@@ -149,7 +161,8 @@ const sendDiscord = async (content) => {
 
 // LINEのメッセージ送信
 const sendLine = async (content) => {
-  if (process.env.LINE_ACCESS_TOKEN && process.env.LINE_USER_ID) {
+  const status = store.get('settings.notify.line') || false
+  if (process.env.LINE_ACCESS_TOKEN && process.env.LINE_USER_ID && status) {
     const post = await axios.post(
       process.env.DISCORD_WEBHOOK,
       {
