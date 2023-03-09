@@ -26,13 +26,13 @@
     <div class="tab-content mt-2" id="myTabContent">
       <div class="tab-pane fade show active" id="new-tab-pane" role="tabpanel" aria-labelledby="new-tab" tabindex="0">
         <div class="mb-3">
-          <label for="new-name" class="form-label">名前</label>
+          <label for="new-name" class="form-label">名前（必須）</label>
           <input type="text" class="form-control" id="new-name">
         </div>
       </div>
       <div class="tab-pane fade" id="exist-tab-pane" role="tabpanel" aria-labelledby="exist-tab" tabindex="0">
         <div class="mb-3">
-          <label for="name" class="form-label">名前</label>
+          <label for="name" class="form-label">名前（必須）</label>
           <select id="exist-users" class="form-select" aria-label="既存のユーザー一覧">
             <template id="option-template">
               <option id="opt"></option>
@@ -41,6 +41,10 @@
           </select>
         </div>
       </div>
+    </div>
+    <div class="mb-3">
+      <label for="card-name" class="form-label">カードのニックネーム</label>
+      <input type="text" class="form-control" id="card-name">
     </div>
     <button type="button" class="btn btn-secondary" onclick="node.back()">戻る</button>
     <button type="submit" class="btn btn-primary">登録</button>
@@ -67,21 +71,22 @@
     const form = document.getElementById('form');
     form.addEventListener('submit', (e) => {
       e.preventDefault();
-      const state = document.querySelector("button.nav-link.active").id
+      const state = document.querySelector("button.nav-link.active").id;
+      const cardName = document.getElementById("card-name").value;
       if (state === "new-tab") {
         const name = document.getElementById("new-name").value;
         if (name.length > 255) {
           document.getElementById("toolong").removeAttribute("hidden")
         } else if (name) {
           document.getElementById("toolong").setAttribute("hidden", "")
-          node.register("create", name);
+          node.register("create", name, cardName);
           document.getElementById("info").removeAttribute("hidden")
         }
       } else {
         const name = document.getElementById("exist-users").value;
         if (name) {
           document.getElementById("toolong").setAttribute("hidden", "")
-          node.register("update", name);
+          node.register("update", name, cardName);
           document.getElementById("info").removeAttribute("hidden")
         }
       }

@@ -17,6 +17,7 @@ let mode = 'read'
 let registerData = {
   type: 'create',
   name: '',
+  cardName: '',
   id: '',
 }
 
@@ -79,6 +80,9 @@ const Card = sequelize.define(
       type: DataTypes.STRING(16),
       allowNull: false,
       unique: true,
+    },
+    name: {
+      type: DataTypes.STRING,
     },
     userId: {
       type: DataTypes.STRING(26),
@@ -234,6 +238,7 @@ app.whenReady().then(() => {
             const newCard = await Card.create({
               id: ULID.ulid(),
               idm: card.uid,
+              name: registerData.cardName,
               userId: newUser.id,
             })
             await sendDiscord(`🆕 ${registerData.name}さんを登録しました`)
@@ -247,6 +252,7 @@ app.whenReady().then(() => {
             const newCard = await Card.create({
               id: ULID.ulid(),
               idm: card.uid,
+              name: registerData.cardName,
               userId: registerData.id,
             })
             currentUser.state = true
@@ -266,14 +272,12 @@ app.whenReady().then(() => {
           win.webContents.send('end')
           mode = 'read'
         } else {
-          const uid = (
-            await Card.findOne({
-              where: { idm: card.uid },
-            })
-          ).userId
-          if (uid) {
+          const uCard = await Card.findOne({
+            where: { idm: card.uid },
+          })
+          if (uCard.userId) {
             const user = await User.findOne({
-              where: { id: uid },
+              where: { id: uCard.userId },
             })
             if (user.id) {
               win.webContents.send('auth', { name: user.name })
@@ -284,14 +288,20 @@ app.whenReady().then(() => {
               user.state = !user.state
               const updatedUser = await user.save()
               await sendDiscord(
-                `🚪 ${user.name}さんが${user.state ? '入室' : '退室'}しました`
+                `🚪 ${user.name}さんが${uCard ? `${uCard.name}で` : ''}${
+                  user.state ? '入室' : '退室'
+                }しました`
               )
               await sendLine(
-                `🚪 ${user.name}さんが${user.state ? '入室' : '退室'}しました`
+                `🚪 ${user.name}さんが${uCard ? `${uCard.name}で` : ''}${
+                  user.state ? '入室' : '退室'
+                }しました`
               )
               win.webContents.send(
                 'debug',
-                `id: ${user.id}\nidm: ${card.uid}\nstate: ${user.state}`
+                `id: ${user.id}\nidm: ${card.uid}\ncardName: ${
+                  uCard.name || ''
+                }\nstate: ${user.state}`
               )
             }
           }
@@ -323,6 +333,7 @@ ipcMain.handle('back', (e) => {
   registerData = {
     type: 'create',
     name: '',
+    cardName: '',
     id: '',
   }
   win.loadFile(path.join(__dirname, 'pages', 'index.html'))
@@ -335,17 +346,19 @@ ipcMain.handle('reset', (e) => {
   }, 5000)
 })
 
-ipcMain.handle('register', (e, type, name) => {
+ipcMain.handle('register', (e, type, name, cardName) => {
   mode = 'register'
   if (type === 'create') {
     registerData = {
       type: 'create',
       name: name,
+      cardName: cardName,
     }
   } else {
     registerData = {
       type: 'update',
       id: name,
+      cardName: cardName,
     }
   }
 })
