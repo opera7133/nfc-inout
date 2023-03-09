@@ -16,11 +16,7 @@ FelicaとElectronで入退室管理
 
 `npm i`を実行してパッケージをインストールします。
 
-### 4. 環境変数の設定
-
-`.env.sample`を`.env`にコピーし、設定します。
-
-### 5. ビルド
+### 4. ビルド
 
 windows向けにビルドする場合は`npm run build:win`、linux向けは`npm run build:linux`を実行します。
 
