@@ -3,7 +3,6 @@
 const { app, dialog, BrowserWindow, ipcMain } = require('electron')
 const { NFC } = require('nfc-pcsc')
 const path = require('path')
-const fs = require('fs')
 const ULID = require('ulid')
 const axios = require('axios')
 const sound = require('sound-play')
@@ -73,6 +72,7 @@ const Card = sequelize.define(
     userId: {
       type: DataTypes.STRING(26),
       allowNull: false,
+      onDelete: 'cascade',
     },
   },
   {}
@@ -179,13 +179,13 @@ function createWindow() {
     autoHideMenuBar: true,
     width: 800,
     height: 600,
-    icon: path.join(__dirname, 'assets/icon.png'),
+    icon: path.join(__dirname, 'assets/img/icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
     },
   })
 
-  win.loadFile(path.join(__dirname, 'index.html'))
+  win.loadFile(path.join(__dirname, 'pages', 'index.html'))
 }
 
 app.whenReady().then(() => {
@@ -218,11 +218,19 @@ app.whenReady().then(() => {
             await sendDiscord(`🆕 ${registerData.name}さんを登録しました`)
             await sendLine(`🆕 ${registerData.name}さんを登録しました`)
           } else {
+            const currentUser = await User.findOne({
+              where: {
+                id: registerData.id,
+              },
+            })
             const newCard = await Card.create({
               id: ULID.ulid(),
               idm: card.uid,
               userId: registerData.id,
             })
+            currentUser.state = true
+            currentUser.last = new Date()
+            await currentUser.save()
           }
           win.webContents.send('callback', true)
           mode = 'read'
@@ -237,26 +245,32 @@ app.whenReady().then(() => {
           win.webContents.send('end')
           mode = 'read'
         } else {
-          const uid = await Card.findOne({
-            where: { idm: card.uid },
-          }).userId
+          const uid = (
+            await Card.findOne({
+              where: { idm: card.uid },
+            })
+          ).userId
           if (uid) {
             const user = await User.findOne({
               where: { id: uid },
             })
-            if (user) {
-              win.webContents.send('auth', { data: { name: user.name } })
+            if (user.id) {
+              win.webContents.send('auth', { name: user.name })
               sound.play(sound.play(path.join(__dirname, 'success.mp3')))
               if (!user.state) {
                 user.last = new Date()
               }
-              user.state = data.state
+              user.state = !user.state
               const updatedUser = await user.save()
               await sendDiscord(
-                `🚪 ${user.name}さんが${!user.state ? '入室' : '退室'}しました`
+                `🚪 ${user.name}さんが${user.state ? '入室' : '退室'}しました`
               )
               await sendLine(
-                `🚪 ${user.name}さんが${!user.state ? '入室' : '退室'}しました`
+                `🚪 ${user.name}さんが${user.state ? '入室' : '退室'}しました`
+              )
+              win.webContents.send(
+                'debug',
+                `id: ${user.id}\nidm: ${card.uid}\nstate: ${user.state}`
               )
             }
           }
@@ -276,11 +290,11 @@ app.on('window-all-closed', function () {
 })
 
 ipcMain.handle('doRegister', (e) => {
-  win.loadFile(path.join(__dirname, 'register.html'))
+  win.loadFile(path.join(__dirname, 'pages', 'register.html'))
 })
 
 ipcMain.handle('showUsers', (e) => {
-  win.loadFile(path.join(__dirname, 'users.html'))
+  win.loadFile(path.join(__dirname, 'pages', 'users.html'))
 })
 
 ipcMain.handle('back', (e) => {
@@ -290,7 +304,7 @@ ipcMain.handle('back', (e) => {
     name: '',
     id: '',
   }
-  win.loadFile(path.join(__dirname, 'index.html'))
+  win.loadFile(path.join(__dirname, 'pages', 'index.html'))
 })
 
 ipcMain.handle('reset', (e) => {
@@ -317,11 +331,17 @@ ipcMain.handle('register', (e, type, name) => {
 
 ipcMain.handle('changeState', async (e, uid) => {
   const user = await User.findOne({ where: { id: uid } })
-  if (user.state) {
+  if (!user.state) {
     user.last = new Date()
   }
   user.state = !user.state
   await user.save()
+  await sendDiscord(
+    `🚪 ${user.name}さんを${user.state ? '入室' : '退室'}に変更しました`
+  )
+  await sendLine(
+    `🚪 ${user.name}さんを${user.state ? '入室' : '退室'}に変更しました`
+  )
   win.webContents.reloadIgnoringCache()
 })
 
@@ -335,7 +355,7 @@ ipcMain.handle('deleteUser', async (e, uid) => {
   })
   if (select === 0) {
     const user = await User.findOne({ where: { id: uid } })
-    await User.destroy(user)
+    await user.destroy()
     win.webContents.reloadIgnoringCache()
     await sendDiscord(`❌ ${user.name}さんを削除しました`)
     await sendLine(`❌ ${user.name}さんを削除しました`)
@@ -351,5 +371,26 @@ ipcMain.handle('loadSettings', (e) => {
   return store.get('settings')
 })
 ipcMain.handle('setSettings', (e, data) => {
-  store.set('settings', data)
+  try {
+    const settings = store.get('settings')
+    store.set('settings', { ...settings, ...data })
+    return true
+  } catch (e) {
+    return false
+  }
+})
+ipcMain.handle('openSettings', (e) => {
+  const settingsWindow = new BrowserWindow({
+    parent: win,
+    title: '環境設定',
+    width: 600,
+    height: 400,
+    autoHideMenuBar: true,
+    icon: path.join(__dirname, 'assets/img/icon.png'),
+    webPreferences: {
+      preload: path.join(__dirname, 'preload-settings.js'),
+    },
+    modal: true,
+  })
+  settingsWindow.loadFile(path.join(__dirname, 'pages', 'settings.html'))
 })

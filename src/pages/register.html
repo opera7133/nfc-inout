@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>入退室管理システム</title>
+  <link href="../assets/styles/bootstrap.min.css" rel="stylesheet" />
+  <link href="../assets/styles/main.css" rel="stylesheet" />
+</head>
+
+<body>
+  <h1>登録</h1>
+  <form id="form">
+    <ul class="nav nav-tabs" id="myTab" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="new-tab" data-bs-toggle="tab" data-bs-target="#new-tab-pane" type="button"
+          role="tab" aria-controls="new-tab-pane" aria-selected="true">新規ユーザー</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="exist-tab" data-bs-toggle="tab" data-bs-target="#exist-tab-pane" type="button"
+          role="tab" aria-controls="exist-tab-pane" aria-selected="false">既存ユーザー</button>
+      </li>
+    </ul>
+    <div class="tab-content mt-2" id="myTabContent">
+      <div class="tab-pane fade show active" id="new-tab-pane" role="tabpanel" aria-labelledby="new-tab" tabindex="0">
+        <div class="mb-3">
+          <label for="new-name" class="form-label">名前</label>
+          <input type="text" class="form-control" id="new-name">
+        </div>
+      </div>
+      <div class="tab-pane fade" id="exist-tab-pane" role="tabpanel" aria-labelledby="exist-tab" tabindex="0">
+        <div class="mb-3">
+          <label for="name" class="form-label">名前</label>
+          <select id="exist-users" class="form-select" aria-label="既存のユーザー一覧">
+            <template id="option-template">
+              <option id="opt"></option>
+            </template>
+            <option value="" selected>ユーザーを選択</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <button type="button" class="btn btn-secondary" onclick="node.back()">戻る</button>
+    <button type="submit" class="btn btn-primary">登録</button>
+  </form>
+  <div class="alert alert-info" role="alert" style="margin-top: 1rem;" id="info" hidden>
+    カードをかざしてください。
+  </div>
+  <div class="alert alert-danger" role="alert" style="margin-top: 1rem;" id="alert" hidden>
+    登録中にエラーが発生しました。
+  </div>
+  <div class="alert alert-danger" role="alert" style="margin-top: 1rem;" id="toolong" hidden>
+    名前は255文字以下にしてください。
+  </div>
+  <script>
+    (async () => {
+      const settings = await node.loadSettings()
+      if (settings) {
+        if (settings.darkmode || false) {
+          document.documentElement.setAttribute('data-bs-theme', 'dark')
+        }
+      }
+    })()
+    node.callback();
+    const form = document.getElementById('form');
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const state = document.querySelector("button.nav-link.active").id
+      if (state === "new-tab") {
+        const name = document.getElementById("new-name").value;
+        if (name.length > 255) {
+          document.getElementById("toolong").removeAttribute("hidden")
+        } else if (name) {
+          document.getElementById("toolong").setAttribute("hidden", "")
+          node.register("create", name);
+          document.getElementById("info").removeAttribute("hidden")
+        }
+      } else {
+        const name = document.getElementById("exist-users").value;
+        if (name) {
+          document.getElementById("toolong").setAttribute("hidden", "")
+          node.register("update", name);
+          document.getElementById("info").removeAttribute("hidden")
+        }
+      }
+    });
+    (async () => {
+      const users = await node.getUsers()
+      users.map((user) => {
+        const templateRow = document.getElementById('option-template');
+        const content = templateRow.content;
+        const clone = document.importNode(content, true);
+        clone.getElementById("opt").innerText = user.name;
+        clone.getElementById("opt").value = user.id;
+        document.getElementById('exist-users').appendChild(clone);
+      })
+    })()
+  </script>
+  <script src="../assets/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>環境設定</title>
+  <link href="../assets/styles/bootstrap.min.css" rel="stylesheet" />
+  <link href="../assets/styles/main.css" rel="stylesheet" />
+</head>
+
+<body class="position-relative min-vh-100">
+  <h1>設定</h1>
+  <h5>外観</h5>
+  <div class="form-check form-switch">
+    <input class="form-check-input" type="checkbox" role="switch" id="darkmodeCheck">
+    <label class="form-check-label" for="darkmodeCheck">ダークモード</label>
+  </div>
+  <div class="d-inline-flex flex-row gap-3 position-absolute bg-body bottom-0 end-0 pe-4 py-4 w-100">
+    <button type="button" class="d-block ms-auto btn btn-secondary" onclick="window.close()">キャンセル</button>
+    <button type="button" class="d-block btn btn-primary" onclick="saveSettings()">保存</button>
+  </div>
+  <script>
+    (async () => {
+      const settings = await el.loadSettings()
+      if (settings.darkmode || false) {
+        document.documentElement.setAttribute('data-bs-theme', 'dark')
+      }
+      document.getElementById("darkmodeCheck").checked = settings.darkmode || false
+    })()
+    async function saveSettings() {
+      const darkmode = document.getElementById("darkmodeCheck").checked
+      const res = await el.setSettings({ darkmode: darkmode })
+      if (res) {
+        window.close()
+      }
+    }
+  </script>
+  <script src="../assets/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>

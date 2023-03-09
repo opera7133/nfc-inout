@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>入退室管理システム</title>
+  <link href="../assets/styles/bootstrap.min.css" rel="stylesheet" />
+  <link href="../assets/styles/main.css" rel="stylesheet" />
+</head>
+
+<body class="position-relative min-vh-100">
+  <h1>ユーザー一覧</h1>
+  <table class="w-100 text-center overflow-y-scroll">
+    <thead class="border-bottom border-secondary">
+      <tr>
+        <th>名前</th>
+        <th>状態</th>
+        <th>経過時間</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody id="data-rows">
+      <template id="template-row">
+        <tr>
+          <td class="py-3" id="name">name</td>
+          <td id="state">state</td>
+          <td id="last">last</td>
+          <td id="control">
+            <div class="btn-group" role="group" aria-label="Basic example">
+              <button type="button" class="btn btn-primary" id="changeState" onclick="">状態変更</button>
+              <button type="button" class="btn btn-danger" id="deleteUser" onclick="">削除</button>
+            </div>
+          </td>
+        </tr>
+      </template>
+    </tbody>
+  </table>
+  <div class="position-absolute bg-body bottom-0 end-0 pe-4 py-4 w-100">
+    <button type="button" class="d-block ms-auto btn btn-secondary" onclick="node.back()">戻る</button>
+  </div>
+  <script>
+    function getHourDiff(d1, d2) {
+      let diff = d1.getTime() - d2.getTime();
+      let diffHour = diff / (1000 * 60 * 60);
+      let diffMinute = (diffHour - Math.floor(diffHour)) * 60;
+      let diffSecond = (diffMinute - Math.floor(diffMinute)) * 60;
+      return ('00' + Math.floor(diffHour)).slice(-2) + ':' + ('00' + Math.floor(diffMinute)).slice(-2) + ':' + ('00'
+        + Math.round(diffSecond)).slice(-2);
+    }
+    (async () => {
+      const settings = await node.loadSettings()
+      if (settings) {
+        if (settings.darkmode || false) {
+          document.documentElement.setAttribute('data-bs-theme', 'dark')
+        }
+      }
+      const users = await node.getUsers()
+      users.map((user) => {
+        const templateRow = document.getElementById('template-row');
+        const content = templateRow.content;
+        const clone = document.importNode(content, true);
+        clone.getElementById("name").innerText = user.name;
+        clone.getElementById("state").innerText = user.state === 1 ? "入室" : "退室";
+        clone.getElementById("last").innerText = user.state === 1 ? getHourDiff(new Date(), new Date(user.last)) : "00:00:00";
+        clone.getElementById("changeState").onclick = (() => { node.changeState(user.id); })
+        clone.getElementById("deleteUser").onclick = (() => { node.deleteUser(user.id);; })
+        document.getElementById('data-rows').appendChild(clone);
+      })
+    })()
+  </script>
+  <script src="../assets/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>

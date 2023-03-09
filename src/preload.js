@@ -21,7 +21,7 @@ contextBridge.exposeInMainWorld('node', {
   end: () => {
     ipcRenderer.on('end', (e) => {
       document.getElementById('warn').setAttribute('hidden', '')
-      document.getElementById('main').textContent = 'カードをリセットしました'
+      document.getElementById('main').textContent = 'カードの登録を解除しました'
       setTimeout(() => {
         document.getElementById('main').textContent = '待機中です...'
       }, 5000)
@@ -77,6 +77,12 @@ contextBridge.exposeInMainWorld('node', {
   },
   deleteUser: (uid) => {
     ipcRenderer.invoke('deleteUser', uid)
+  },
+  setSettings: async (data) => {
+    return await ipcRenderer.invoke('setSettings', data)
+  },
+  openSettings: async () => {
+    ipcRenderer.invoke('openSettings')
   },
   loadSettings: async () => {
     return await ipcRenderer.invoke('loadSettings')
