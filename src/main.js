@@ -32,6 +32,7 @@ if (!store.get('settings')) {
   store.set('settings', {
     debug: false,
     darkmode: false,
+    sound: true,
     notify: {
       discord: true,
       line: false,
@@ -189,6 +190,13 @@ const sendLine = async (content) => {
   }
 }
 
+const playSound = (file) => {
+  const status = store.get('settings.sound') || false
+  if (status) {
+    sound.play(path.join(__dirname, file))
+  }
+}
+
 // ウィンドウ初期化
 function createWindow() {
   win = new BrowserWindow({
@@ -227,7 +235,7 @@ app.whenReady().then(() => {
     reader.on('card', async (card) => {
       try {
         if (mode === 'register') {
-          sound.play(path.join(__dirname, 'success.mp3'))
+          playSound('success.mp3')
           if (registerData.type === 'create') {
             const newUser = await User.create({
               id: ULID.ulid(),
@@ -262,7 +270,7 @@ app.whenReady().then(() => {
           win.webContents.send('callback', true)
           mode = 'read'
         } else if (mode === 'reset') {
-          sound.play(path.join(__dirname, 'success.mp3'))
+          playSound('success.mp3')
           const deleteCard = await Card.findOne({
             where: { idm: card.uid },
           })
@@ -281,7 +289,7 @@ app.whenReady().then(() => {
             })
             if (user.id) {
               win.webContents.send('auth', { name: user.name })
-              sound.play(sound.play(path.join(__dirname, 'success.mp3')))
+              playSound('success.mp3')
               if (!user.state) {
                 user.last = new Date()
               }
@@ -308,7 +316,7 @@ app.whenReady().then(() => {
         }
       } catch (err) {
         console.error(`error`, err)
-        sound.play(path.join(__dirname, 'error.mp3'))
+        playSound('error.mp3')
         win.webContents.send('callback', false)
         mode = 'read'
       }
