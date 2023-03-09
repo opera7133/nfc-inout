@@ -22,9 +22,16 @@ FelicaとElectronで入退室管理
 
 ### 5. ビルド
 
-windows向けにビルドする場合は`npm run build:win`、linux向けは`npm run build:linux`を実行します。
+ビルド前に必ず`electron-rebuild`を実行してください！
 
-windowsの場合、事前に`./node_modules/.bin/electron-rebuild.cmd`を実行する必要があります。
+```bash
+# Windowsの場合
+./node_modules/.bin/electron-rebuild.cmd
+# Linuxの場合
+./node_modules/.bin/electron-rebuild
+```
+
+windows向けにビルドする場合は`npm run build:win`、linux向けは`npm run build:linux`を実行します。
 
 ## License
 
