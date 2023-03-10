@@ -41,7 +41,9 @@ if (!store.get('settings')) {
 }
 
 // ORMの構成
-const sequelize = new Sequelize(process.env.DATABASE_URL)
+const sequelize = new Sequelize(process.env.DATABASE_URL, {
+  logging: false,
+})
 const User = sequelize.define(
   'users',
   {
@@ -102,6 +104,7 @@ fastify.register(require('@fastify/view'), {
   engine: {
     ejs: require('ejs'),
   },
+  root: path.join(__dirname, 'views'),
 })
 fastify.register(require('@fastify/static'), {
   root: path.join(__dirname, 'public'),
@@ -128,7 +131,7 @@ fastify.after(() => {
   }
   fastify.get('/', async (req, reply) => {
     const users = await User.findAll({ raw: true })
-    await reply.view('/src/views/index.ejs', { users: users })
+    await reply.view('index.ejs', { users: users })
   })
   fastify.get('/favicon.ico', async (req, reply) => {
     await reply.sendFile('favicon.ico')
