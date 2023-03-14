@@ -1,7 +1,7 @@
 'use strict'
 
 const { app, dialog, BrowserWindow, ipcMain, shell } = require('electron')
-const { NFC } = require('nfc-pcsc')
+const { NFC } = require('@opera7133/nfc-pcsc')
 const path = require('path')
 const ULID = require('ulid')
 const axios = require('axios')
