@@ -1,6 +1,6 @@
 {
   "name": "nfc-inout",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "Manage entry/exit with Felica and Electron",
   "main": "src/main.js",
   "scripts": {
@@ -15,13 +15,13 @@
     "@fastify/basic-auth": "^5.0.0",
     "@fastify/static": "^6.9.0",
     "@fastify/view": "^7.4.1",
+    "@opera7133/nfc-pcsc": "^0.8.1-fix",
     "axios": "^1.3.4",
     "dotenv": "^16.0.3",
     "ejs": "^3.1.8",
     "electron-store": "^8.1.0",
     "fastify": "^4.14.1",
     "mysql2": "^3.2.0",
-    "nfc-pcsc": "^0.8.1",
     "sequelize": "^6.29.1",
     "sound-play": "^1.1.0",
     "ulid": "^2.3.0"
