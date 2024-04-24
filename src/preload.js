@@ -18,6 +18,9 @@ contextBridge.exposeInMainWorld('node', {
   getUsers: async () => {
     return await ipcRenderer.invoke('getUsers')
   },
+  getCards: async (uid) => {
+    return await ipcRenderer.invoke('getCards', uid)
+  },
   end: () => {
     ipcRenderer.on('end', (e) => {
       document.getElementById('warn').setAttribute('hidden', '')
@@ -78,6 +81,12 @@ contextBridge.exposeInMainWorld('node', {
   deleteUser: (uid) => {
     ipcRenderer.invoke('deleteUser', uid)
   },
+  deleteCard: (cardId) => {
+    ipcRenderer.invoke('deleteCard', cardId)
+  },
+  showCards: (uid) => {
+    ipcRenderer.invoke('showCards', uid)
+  },
   setSettings: async (data) => {
     return await ipcRenderer.invoke('setSettings', data)
   },
@@ -89,5 +98,8 @@ contextBridge.exposeInMainWorld('node', {
   },
   loadSettings: async () => {
     return await ipcRenderer.invoke('loadSettings')
+  },
+  getVersion: async () => {
+    return await ipcRenderer.invoke('getVersion')
   },
 })

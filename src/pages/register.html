@@ -29,6 +29,10 @@
           <label for="new-name" class="form-label">名前（必須）</label>
           <input type="text" class="form-control" id="new-name">
         </div>
+        <div class="mb-3">
+          <label for="read-name" class="form-label">読み上げ（必須）</label>
+          <input type="text" class="form-control" id="read-name">
+        </div>
       </div>
       <div class="tab-pane fade" id="exist-tab-pane" role="tabpanel" aria-labelledby="exist-tab" tabindex="0">
         <div class="mb-3">
@@ -75,11 +79,12 @@
       const cardName = document.getElementById("card-name").value;
       if (state === "new-tab") {
         const name = document.getElementById("new-name").value;
-        if (name.length > 255) {
+        const readname = document.getElementById("read-name").value;
+        if (name.length > 255 || readname.length > 255) {
           document.getElementById("toolong").removeAttribute("hidden")
         } else if (name) {
           document.getElementById("toolong").setAttribute("hidden", "")
-          node.register("create", name, cardName);
+          node.register("create", name, readname, cardName);
           document.getElementById("info").removeAttribute("hidden")
         }
       } else {

@@ -1,7 +1,7 @@
 'use strict'
 
 const { app, dialog, BrowserWindow, ipcMain, shell } = require('electron')
-const { NFC } = require('@opera7133/nfc-pcsc')
+const { NFC } = require('nfc-pcsc')
 const path = require('path')
 const ULID = require('ulid')
 const axios = require('axios')
@@ -212,6 +212,7 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
     },
   })
+  win.webContents.openDevTools()
   const handleUrlOpen = (e, url) => {
     if (url.match(/^http/)) {
       e.preventDefault()
@@ -235,6 +236,7 @@ app.whenReady().then(() => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
   nfc.on('reader', (reader) => {
+    reader.autoProcessing = false;
     reader.on('card', async (card) => {
       try {
         if (mode === 'register') {
@@ -334,7 +336,7 @@ app.whenReady().then(() => {
         mode = 'read'
       }
     })
-  })
+  });
 })
 
 app.on('window-all-closed', function () {
@@ -347,6 +349,12 @@ ipcMain.handle('doRegister', (e) => {
 
 ipcMain.handle('showUsers', (e) => {
   win.loadFile(path.join(__dirname, 'pages', 'users.html'))
+})
+
+ipcMain.handle('showCards', (e, uid) => {
+  win.loadFile(path.join(__dirname, 'pages', 'cards.html'), {
+    query: { uid: uid },
+  })
 })
 
 ipcMain.handle('back', (e) => {
@@ -367,18 +375,20 @@ ipcMain.handle('reset', (e) => {
   }, 5000)
 })
 
-ipcMain.handle('register', (e, type, name, cardName) => {
+ipcMain.handle('register', (e, type, name, readName, cardName) => {
   mode = 'register'
   if (type === 'create') {
     registerData = {
       type: 'create',
       name: name,
+      readName: readName,
       cardName: cardName,
     }
   } else {
     registerData = {
       type: 'update',
       id: name,
+      readName: readName,
       cardName: cardName,
     }
   }
@@ -409,6 +419,10 @@ ipcMain.handle('deleteUser', async (e, uid) => {
     cancelId: 1,
   })
   if (select === 0) {
+    const userCards = await Card.findAll({ where: { userId: uid } })
+    for (const card of userCards) {
+      await card.destroy()
+    }
     const user = await User.findOne({ where: { id: uid } })
     await user.destroy()
     win.webContents.reloadIgnoringCache()
@@ -417,9 +431,32 @@ ipcMain.handle('deleteUser', async (e, uid) => {
   }
 })
 
+ipcMain.handle('deleteCard', async (e, cardId) => {
+  const select = dialog.showMessageBoxSync({
+    type: 'question',
+    title: 'カードを削除します',
+    message: '本当によろしいですか？',
+    buttons: ['削除', 'キャンセル'],
+    cancelId: 1,
+  })
+  if (select === 0) {
+    const card = await Card.findOne({ where: { id: cardId } })
+    const user = await User.findOne({ where: { id: card.userId } })
+    await card.destroy()
+    win.webContents.reloadIgnoringCache()
+    await sendDiscord(`❌ ${user.name}さんの${card.name}を削除しました`)
+    await sendLine(`❌ ${user.name}さんの${card.name}を削除しました`)
+  }
+})
+
 ipcMain.handle('getUsers', async (e) => {
   const users = await User.findAll({ raw: true })
   return users
+})
+
+ipcMain.handle('getCards', async (e) => {
+  const cards = await Card.findAll({ raw: true })
+  return cards
 })
 
 ipcMain.handle('loadSettings', (e) => {
@@ -471,4 +508,8 @@ ipcMain.handle('openSettings', (e) => {
     modal: true,
   })
   settingsWindow.loadFile(path.join(__dirname, 'pages', 'settings.html'))
+})
+
+ipcMain.handle('getVersion', (e) => {
+  return app.getVersion()
 })

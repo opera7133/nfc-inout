@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>入退室管理システム</title>
+    <link href="../assets/styles/bootstrap.min.css" rel="stylesheet" />
+    <link href="../assets/styles/main.css" rel="stylesheet" />
+  </head>
+
+  <body class="position-relative min-vh-100">
+    <h1 id="card-list-title">カード一覧</h1>
+    <table class="w-100 text-center overflow-y-scroll" id="cards-data">
+      <thead class="border-bottom border-secondary">
+        <tr>
+          <th>名前</th>
+          <th>IDm</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody id="data-rows">
+        <template id="template-row">
+          <tr>
+            <td class="py-3" id="name">name</td>
+            <td id="idm">idm</td>
+            <td id="control">
+              <div class="btn-group" role="group" aria-label="Basic example">
+                <button
+                  type="button"
+                  class="btn btn-danger"
+                  id="deleteCard"
+                  onclick=""
+                >
+                  削除
+                </button>
+              </div>
+            </td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+    <div class="alert alert-info" role="alert" style="margin-top: 1rem;" id="nouser" hidden>
+      ユーザーがありません。
+    </div>
+    <div class="alert alert-info" role="alert" style="margin-top: 1rem;" id="nocard" hidden>
+      カードがありません。
+    </div>
+    <div class="position-absolute bg-body bottom-0 end-0 pe-4 py-4 w-100">
+      <button
+        type="button"
+        class="d-block ms-auto btn btn-secondary"
+        onclick="node.back()"
+      >
+        戻る
+      </button>
+    </div>
+    <script>
+      const getUrlQuery = () => {
+        const query = window.location.search.substring(1)
+        const vars = query.split('&')
+        const res = {}
+        for (let i = 0; i < vars.length; i++) {
+          const pair = vars[i].split('=')
+          res[pair[0]] = decodeURIComponent(pair[1])
+        }
+        return res
+      }
+      ;(async () => {
+        const settings = await node.loadSettings()
+        if (settings) {
+          if (settings.darkmode || false) {
+            document.documentElement.setAttribute('data-bs-theme', 'dark')
+          }
+        }
+        const query = getUrlQuery()
+        if (!query.uid) {
+          document.getElementById('cards-data').setAttribute('hidden', '')
+          document.getElementById('nouser').removeAttribute('hidden')
+          return
+        }
+        const cards = await node.getCards(query.uid)
+        if (cards.length === 0) {
+          document.getElementById('cards-data').setAttribute('hidden', '')
+          document.getElementById('nocard').removeAttribute('hidden')
+          return
+        }
+        cards.map((card) => {
+          const templateRow = document.getElementById('template-row')
+          const content = templateRow.content
+          const clone = document.importNode(content, true)
+          clone.getElementById('name').innerText = card.name
+          clone.getElementById('idm').innerText = card.idm
+          clone.getElementById('deleteCard').onclick = () => {
+            node.deleteCard(card.id)
+          }
+          document.getElementById('data-rows').appendChild(clone)
+        })
+      })()
+    </script>
+    <script src="../assets/js/bootstrap.bundle.min.js"></script>
+  </body>
+</html>

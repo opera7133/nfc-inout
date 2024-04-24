@@ -12,7 +12,7 @@
 
 <body class="position-relative min-vh-100">
   <h1>ユーザー一覧</h1>
-  <table class="w-100 text-center overflow-y-scroll">
+  <table class="w-100 text-center overflow-y-scroll" id="users-data">
     <thead class="border-bottom border-secondary">
       <tr>
         <th>名前</th>
@@ -29,6 +29,7 @@
           <td id="last">last</td>
           <td id="control">
             <div class="btn-group" role="group" aria-label="Basic example">
+              <button type="button" class="btn btn-primary" id="showCards" onclick="">カード</button>
               <button type="button" class="btn btn-primary" id="changeState" onclick="">状態変更</button>
               <button type="button" class="btn btn-danger" id="deleteUser" onclick="">削除</button>
             </div>
@@ -37,6 +38,9 @@
       </template>
     </tbody>
   </table>
+  <div class="alert alert-info" role="alert" style="margin-top: 1rem;" id="nouser" hidden>
+    ユーザーがありません。
+  </div>
   <div class="position-absolute bg-body bottom-0 end-0 pe-4 py-4 w-100">
     <button type="button" class="d-block ms-auto btn btn-secondary" onclick="node.back()">戻る</button>
   </div>
@@ -57,6 +61,10 @@
         }
       }
       const users = await node.getUsers()
+      if (users.length === 0) {
+        document.getElementById('users-data').setAttribute('hidden', '')
+        document.getElementById('nouser').removeAttribute('hidden')
+      }
       users.map((user) => {
         const templateRow = document.getElementById('template-row');
         const content = templateRow.content;
@@ -64,6 +72,7 @@
         clone.getElementById("name").innerText = user.name;
         clone.getElementById("state").innerText = user.state === 1 ? "入室" : "退室";
         clone.getElementById("last").innerText = user.state === 1 ? getHourDiff(new Date(), new Date(user.last)) : "00:00:00";
+        clone.getElementById("showCards").onclick = (() => { node.showCards(user.id); })
         clone.getElementById("changeState").onclick = (() => { node.changeState(user.id); })
         clone.getElementById("deleteUser").onclick = (() => { node.deleteUser(user.id);; })
         document.getElementById('data-rows').appendChild(clone);

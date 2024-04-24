@@ -9,4 +9,7 @@ contextBridge.exposeInMainWorld('el', {
   loadSettings: async () => {
     return await ipcRenderer.invoke('loadSettings')
   },
+  getVersion: async () => {
+    return await ipcRenderer.invoke('getVersion')
+  },
 })

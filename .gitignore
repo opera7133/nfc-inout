@@ -4,3 +4,4 @@
 .env.production
 node_modules
 release/1*
+.DS_Store
