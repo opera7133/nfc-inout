@@ -24,13 +24,20 @@
     </div>
     <h5>通知</h5>
     <p><code>.env</code>で設定されている場合のみ使用可能です。</p>
-    <div class="form-check form-switch">
-      <input class="form-check-input" type="checkbox" role="switch" id="discordCheck">
-      <label class="form-check-label" for="discordCheck">Discord通知</label>
+    <div>
+      <!-- webhook text input-->
+      <label for="discordWebhook" class="form-label">Discord Webhook URL</label>
+      <input type="text" class="form-control" id="discordWebhook" placeholder="https://discord.com/api/webhooks/...">
     </div>
-    <div class="form-check form-switch">
-      <input class="form-check-input" type="checkbox" role="switch" id="lineCheck">
-      <label class="form-check-label" for="lineCheck">LINE通知</label>
+    <div>
+      <!-- webhook text input-->
+      <label for="lineToken" class="form-label">LINE Notify Token</label>
+      <input type="text" class="form-control" id="lineToken" placeholder="LINE Notify Token">
+    </div>
+    <div>
+      <!-- webhook text input-->
+      <label for="lineUser" class="form-label">LINE 送信先ユーザーID</label>
+      <input type="text" class="form-control" id="lineUser" placeholder="LINE User ID">
     </div>
   </div>
   <div class="d-inline-flex flex-row gap-3 position-absolute bg-body bottom-0 end-0 pe-4 py-4 w-100">
@@ -45,15 +52,17 @@
       }
       document.getElementById("darkmodeCheck").checked = settings.darkmode || false
       document.getElementById("soundEffectCheck").checked = settings.sound || false
-      document.getElementById("discordCheck").checked = settings.notify.discord || false
-      document.getElementById("lineCheck").checked = settings.notify.line || false
+      document.getElementById("discordWebhook").value = settings.notify.discord || ""
+      document.getElementById("lineToken").value = settings.notify.line.token || ""
+      document.getElementById("lineUser").value = settings.notify.line.user || ""
     })()
     async function saveSettings() {
       const darkmode = document.getElementById("darkmodeCheck").checked
       const sound = document.getElementById("soundEffectCheck").checked
-      const discord = document.getElementById("discordCheck").checked
-      const line = document.getElementById("lineCheck").checked
-      const res = await el.setSettings({ darkmode: darkmode, sound: sound, notify: { discord: discord, line: line } })
+      const discordHook = document.getElementById("discordWebhook").value
+      const lineToken = document.getElementById("lineToken").value
+      const lineUser = document.getElementById("lineUser").value
+      const res = await el.setSettings({ darkmode: darkmode, sound: sound, notify: { discord: discordHook, line: { token: lineToken, user: lineUser } } })
       if (res) {
         window.close()
       }

@@ -9,8 +9,8 @@ contextBridge.exposeInMainWorld('node', {
   doRegister: () => {
     ipcRenderer.invoke('doRegister')
   },
-  register: (type, name, cardName) => {
-    ipcRenderer.invoke('register', type, name, cardName)
+  register: (type, name, readName, cardName) => {
+    ipcRenderer.invoke('register', type, name, readName, cardName)
   },
   back: () => {
     ipcRenderer.invoke('back')

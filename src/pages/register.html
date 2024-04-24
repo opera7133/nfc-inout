@@ -89,9 +89,10 @@
         }
       } else {
         const name = document.getElementById("exist-users").value;
+        const readname = "";
         if (name) {
           document.getElementById("toolong").setAttribute("hidden", "")
-          node.register("update", name, cardName);
+          node.register("update", name, readname, cardName);
           document.getElementById("info").removeAttribute("hidden")
         }
       }

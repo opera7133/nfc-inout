@@ -34,8 +34,11 @@ if (!store.get('settings')) {
     darkmode: false,
     sound: true,
     notify: {
-      discord: true,
-      line: false,
+      discord: "",
+      line: {
+        token: "",
+        user: "",
+      }
     },
   })
 }
@@ -57,6 +60,10 @@ const User = sequelize.define(
       type: DataTypes.STRING,
       allowNull: false,
       unique: true,
+    },
+    yomi: {
+      type: DataTypes.STRING,
+      allowNull: true,
     },
     state: {
       type: DataTypes.BOOLEAN,
@@ -149,10 +156,10 @@ const start = async () => {
 
 // Discordのメッセージ送信
 const sendDiscord = async (content) => {
-  const status = store.get('settings.notify.discord') || false
-  if (process.env.DISCORD_WEBHOOK && status) {
+  const discordHook = store.get('settings.notify.discord') || ""
+  if (discordHook && discordHook !== "") {
     const post = await axios.post(
-      process.env.DISCORD_WEBHOOK,
+      discordHook,
       {
         username: '入退室管理',
         content: content,
@@ -169,12 +176,13 @@ const sendDiscord = async (content) => {
 
 // LINEのメッセージ送信
 const sendLine = async (content) => {
-  const status = store.get('settings.notify.line') || false
-  if (process.env.LINE_ACCESS_TOKEN && process.env.LINE_USER_ID && status) {
+  const lineToken = store.get('settings.notify.line.token') || ""
+  const lineUser = store.get('settings.notify.line.user') || ""
+  if (lineToken && lineUser && lineToken !== "" && lineUser !== "") {
     const post = await axios.post(
-      process.env.DISCORD_WEBHOOK,
+      'https://api.line.me/v2/bot/message/push',
       {
-        to: process.env.LINE_USER_ID,
+        to: lineUser,
         messages: [
           {
             type: 'text',
@@ -186,7 +194,7 @@ const sendLine = async (content) => {
         headers: {
           Accept: 'application/json',
           'Content-type': 'application/json',
-          Authorization: `Bearer ${process.env.LINE_ACCESS_TOKEN}`,
+          Authorization: `Bearer ${lineToken}`,
         },
       }
     )
@@ -246,6 +254,7 @@ app.whenReady().then(() => {
               id: ULID.ulid(),
               name: registerData.name,
               state: true,
+              yomi: registerData.yomi,
               last: new Date(),
             })
             const newCard = await Card.create({
@@ -362,6 +371,7 @@ ipcMain.handle('back', (e) => {
   registerData = {
     type: 'create',
     name: '',
+    yomi: '',
     cardName: '',
     id: '',
   }
@@ -381,7 +391,7 @@ ipcMain.handle('register', (e, type, name, readName, cardName) => {
     registerData = {
       type: 'create',
       name: name,
-      readName: readName,
+      yomi: readName,
       cardName: cardName,
     }
   } else {
@@ -419,10 +429,6 @@ ipcMain.handle('deleteUser', async (e, uid) => {
     cancelId: 1,
   })
   if (select === 0) {
-    const userCards = await Card.findAll({ where: { userId: uid } })
-    for (const card of userCards) {
-      await card.destroy()
-    }
     const user = await User.findOne({ where: { id: uid } })
     await user.destroy()
     win.webContents.reloadIgnoringCache()
