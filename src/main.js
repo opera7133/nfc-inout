@@ -56,7 +56,6 @@ const User = sequelize.define(
     name: {
       type: DataTypes.STRING,
       allowNull: false,
-      unique: true,
     },
     yomi: {
       type: DataTypes.STRING,
@@ -236,7 +235,9 @@ function createWindow() {
 }
 
 function readCard() {
-  let pyshell = new PythonShell(path.join(__dirname, 'readcard.py'))
+  let pyshell = new PythonShell(path.join(__dirname, 'readcard.py'), {
+    pythonPath: "/opt/homebrew/bin/python3.11"
+  })
   pyshell.on('message', async (message) => {
     try {
       if (mode === 'register') {
@@ -295,7 +296,7 @@ function readCard() {
         }
         win.webContents.send('end')
         mode = 'read'
-      } else {
+      } else if (mode === 'read') {
         const uCard = await Card.findOne({
           where: { idm: message },
         })
@@ -327,6 +328,19 @@ function readCard() {
                 uCard.name || ''
               }\nstate: ${user.state}`
             )
+            const servers = fastify.websocketServer.clients
+            servers.forEach((client) => {
+              client.send(
+                JSON.stringify({
+                  type: 'state',
+                  user: { name: user.name, state: user.state },
+                })
+              )
+            })
+            mode = 'stop'
+            setTimeout(() => {
+              mode = 'read'
+            }, 2000)
           }
         }
       }
