@@ -1,13 +1,13 @@
 'use strict'
 
 const { app, dialog, BrowserWindow, ipcMain, shell } = require('electron')
-const { NFC } = require('nfc-pcsc')
 const path = require('path')
 const ULID = require('ulid')
 const axios = require('axios')
 const sound = require('sound-play')
 const { Sequelize, DataTypes } = require('sequelize')
 const fastify = require('fastify')()
+const { PythonShell } = require('python-shell')
 
 require('dotenv').config({ path: __dirname + '/../.env' })
 
@@ -21,9 +21,6 @@ let registerData = {
   id: '',
 }
 
-// NFC
-const nfc = new NFC()
-
 // 設定の保存
 const Store = require('electron-store')
 const store = new Store()
@@ -34,11 +31,11 @@ if (!store.get('settings')) {
     darkmode: false,
     sound: true,
     notify: {
-      discord: "",
+      discord: '',
       line: {
-        token: "",
-        user: "",
-      }
+        token: '',
+        user: '',
+      },
     },
   })
 }
@@ -156,8 +153,8 @@ const start = async () => {
 
 // Discordのメッセージ送信
 const sendDiscord = async (content) => {
-  const discordHook = store.get('settings.notify.discord') || ""
-  if (discordHook && discordHook !== "") {
+  const discordHook = store.get('settings.notify.discord') || ''
+  if (discordHook && discordHook !== '') {
     const post = await axios.post(
       discordHook,
       {
@@ -176,9 +173,9 @@ const sendDiscord = async (content) => {
 
 // LINEのメッセージ送信
 const sendLine = async (content) => {
-  const lineToken = store.get('settings.notify.line.token') || ""
-  const lineUser = store.get('settings.notify.line.user') || ""
-  if (lineToken && lineUser && lineToken !== "" && lineUser !== "") {
+  const lineToken = store.get('settings.notify.line.token') || ''
+  const lineUser = store.get('settings.notify.line.user') || ''
+  if (lineToken && lineUser && lineToken !== '' && lineUser !== '') {
     const post = await axios.post(
       'https://api.line.me/v2/bot/message/push',
       {
@@ -220,7 +217,6 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
     },
   })
-  win.webContents.openDevTools()
   const handleUrlOpen = (e, url) => {
     if (url.match(/^http/)) {
       e.preventDefault()
@@ -233,119 +229,130 @@ function createWindow() {
   win.loadFile(path.join(__dirname, 'pages', 'index.html'))
 }
 
+function readCard() {
+  let pyshell = new PythonShell(path.join(__dirname, 'readcard.py'))
+  pyshell.on('message', async (message) => {
+    console.log(message)
+    try {
+      if (mode === 'register') {
+        playSound('success.mp3')
+        if (registerData.type === 'create') {
+          const newUser = await User.create({
+            id: ULID.ulid(),
+            name: registerData.name,
+            state: true,
+            yomi: registerData.yomi,
+            last: new Date(),
+          })
+          const newCard = await Card.create({
+            id: ULID.ulid(),
+            idm: message,
+            name: registerData.cardName,
+            userId: newUser.id,
+          })
+          await sendDiscord(`🆕 ${registerData.name}さんを登録しました`)
+          await sendLine(`🆕 ${registerData.name}さんを登録しました`)
+        } else {
+          const currentUser = await User.findOne({
+            where: {
+              id: registerData.id,
+            },
+          })
+          const newCard = await Card.create({
+            id: ULID.ulid(),
+            idm: message,
+            name: registerData.cardName,
+            userId: registerData.id,
+          })
+          currentUser.state = true
+          currentUser.last = new Date()
+          await currentUser.save()
+        }
+        win.webContents.send('callback', true)
+        mode = 'read'
+      } else if (mode === 'reset') {
+        playSound('success.mp3')
+        const deleteCard = await Card.findOne({
+          where: { idm: message },
+        })
+        if (deleteCard) {
+          const deletedCard = await deleteCard.destroy()
+          await sendDiscord(
+            `❌ ${registerData.name}さんの${
+              deleteCard.name ? deleteCard.name : 'カード'
+            }を削除しました`
+          )
+          await sendLine(
+            `❌ ${registerData.name}さんの${
+              deleteCard.name ? deleteCard.name : 'カード'
+            }を削除しました`
+          )
+        }
+        win.webContents.send('end')
+        mode = 'read'
+      } else {
+        const uCard = await Card.findOne({
+          where: { idm: message },
+        })
+        if (uCard.userId) {
+          const user = await User.findOne({
+            where: { id: uCard.userId },
+          })
+          if (user.id) {
+            win.webContents.send('auth', { name: user.name })
+            playSound('success.mp3')
+            if (!user.state) {
+              user.last = new Date()
+            }
+            user.state = !user.state
+            const updatedUser = await user.save()
+            await sendDiscord(
+              `🚪 ${user.name}さんが${uCard ? `${uCard.name}で` : ''}${
+                user.state ? '入室' : '退室'
+              }しました`
+            )
+            await sendLine(
+              `🚪 ${user.name}さんが${uCard ? `${uCard.name}で` : ''}${
+                user.state ? '入室' : '退室'
+              }しました`
+            )
+            win.webContents.send(
+              'debug',
+              `id: ${user.id}\nidm: ${message}\ncardName: ${
+                uCard.name || ''
+              }\nstate: ${user.state}`
+            )
+          }
+        }
+      }
+    } catch (err) {
+      console.error(`error`, err)
+      playSound('error.mp3')
+      win.webContents.send('callback', false)
+      mode = 'read'
+    }
+  })
+  pyshell.end((err, code, sig) => {
+    if (err) {
+      console.error(err)
+    }
+    readCard()
+  })
+}
+
 app.whenReady().then(() => {
   createWindow()
   start()
+  readCard()
   ;(async () => {
     await User.sync({ alter: true })
     await Card.sync({ alter: true })
   })()
   app.on('activate', function () {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow()
+    }
   })
-  nfc.on('reader', (reader) => {
-    reader.autoProcessing = false;
-    reader.on('card', async (card) => {
-      try {
-        if (mode === 'register') {
-          playSound('success.mp3')
-          if (registerData.type === 'create') {
-            const newUser = await User.create({
-              id: ULID.ulid(),
-              name: registerData.name,
-              state: true,
-              yomi: registerData.yomi,
-              last: new Date(),
-            })
-            const newCard = await Card.create({
-              id: ULID.ulid(),
-              idm: card.uid,
-              name: registerData.cardName,
-              userId: newUser.id,
-            })
-            await sendDiscord(`🆕 ${registerData.name}さんを登録しました`)
-            await sendLine(`🆕 ${registerData.name}さんを登録しました`)
-          } else {
-            const currentUser = await User.findOne({
-              where: {
-                id: registerData.id,
-              },
-            })
-            const newCard = await Card.create({
-              id: ULID.ulid(),
-              idm: card.uid,
-              name: registerData.cardName,
-              userId: registerData.id,
-            })
-            currentUser.state = true
-            currentUser.last = new Date()
-            await currentUser.save()
-          }
-          win.webContents.send('callback', true)
-          mode = 'read'
-        } else if (mode === 'reset') {
-          playSound('success.mp3')
-          const deleteCard = await Card.findOne({
-            where: { idm: card.uid },
-          })
-          if (deleteCard) {
-            const deletedCard = await deleteCard.destroy()
-            await sendDiscord(
-              `❌ ${registerData.name}さんの${
-                deleteCard.name ? deleteCard.name : 'カード'
-              }を削除しました`
-            )
-            await sendLine(
-              `❌ ${registerData.name}さんの${
-                deleteCard.name ? deleteCard.name : 'カード'
-              }を削除しました`
-            )
-          }
-          win.webContents.send('end')
-          mode = 'read'
-        } else {
-          const uCard = await Card.findOne({
-            where: { idm: card.uid },
-          })
-          if (uCard.userId) {
-            const user = await User.findOne({
-              where: { id: uCard.userId },
-            })
-            if (user.id) {
-              win.webContents.send('auth', { name: user.name })
-              playSound('success.mp3')
-              if (!user.state) {
-                user.last = new Date()
-              }
-              user.state = !user.state
-              const updatedUser = await user.save()
-              await sendDiscord(
-                `🚪 ${user.name}さんが${uCard ? `${uCard.name}で` : ''}${
-                  user.state ? '入室' : '退室'
-                }しました`
-              )
-              await sendLine(
-                `🚪 ${user.name}さんが${uCard ? `${uCard.name}で` : ''}${
-                  user.state ? '入室' : '退室'
-                }しました`
-              )
-              win.webContents.send(
-                'debug',
-                `id: ${user.id}\nidm: ${card.uid}\ncardName: ${
-                  uCard.name || ''
-                }\nstate: ${user.state}`
-              )
-            }
-          }
-        }
-      } catch (err) {
-        console.error(`error`, err)
-        playSound('error.mp3')
-        win.webContents.send('callback', false)
-        mode = 'read'
-      }
-    })
-  });
 })
 
 app.on('window-all-closed', function () {

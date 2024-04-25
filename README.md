@@ -16,6 +16,8 @@ FelicaとElectronで入退室管理
 
 `npm i`を実行してパッケージをインストールします。
 
+また、`pip3 install nfcpy`（Windowsの場合はpip）でnfcpyをインストールします。
+
 ### 4. ビルド
 
 ビルド前に必ず`electron-rebuild`を実行してください！
