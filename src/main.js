@@ -238,7 +238,6 @@ function createWindow() {
 function readCard() {
   let pyshell = new PythonShell(path.join(__dirname, 'readcard.py'))
   pyshell.on('message', async (message) => {
-    console.log(message)
     try {
       if (mode === 'register') {
         playSound('success.mp3')
