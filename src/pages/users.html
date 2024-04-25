@@ -29,7 +29,7 @@
           <td id="last">last</td>
           <td id="control">
             <div class="btn-group" role="group" aria-label="Basic example">
-              <button type="button" class="btn btn-primary" id="showCards" onclick="">カード</button>
+              <button type="button" class="btn btn-secondary" id="showCards" onclick="">カード</button>
               <button type="button" class="btn btn-primary" id="changeState" onclick="">状態変更</button>
               <button type="button" class="btn btn-danger" id="deleteUser" onclick="">削除</button>
             </div>
@@ -77,6 +77,24 @@
         clone.getElementById("deleteUser").onclick = (() => { node.deleteUser(user.id);; })
         document.getElementById('data-rows').appendChild(clone);
       })
+      const userdatas = document.querySelectorAll('tbody tr');
+      for (let data of userdatas) {
+        if (data.querySelector('#state').innerText === '入室') {
+          const time = data.querySelector('#last');
+          setInterval(() => {
+            const [hour, minute, second] = time.innerText.split(':').map(Number);
+            if (second === 59) {
+              if (minute === 59) {
+                time.innerText = ('00' + (hour + 1)).slice(-2) + ':00:00';
+              } else {
+                time.innerText = ('00' + hour).slice(-2) + ':' + ('00' + (minute + 1)).slice(-2) + ':00';
+              }
+            } else {
+              time.innerText = ('00' + hour).slice(-2) + ':' + ('00' + minute).slice(-2) + ':' + ('00' + (second + 1)).slice(-2);
+            }
+          }, 1000);
+        }
+      }
     })()
   </script>
   <script src="../assets/js/bootstrap.bundle.min.js"></script>

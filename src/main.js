@@ -118,6 +118,7 @@ fastify.register(require('@fastify/basic-auth'), {
   validate,
   authenticate: true,
 })
+fastify.register(require('@fastify/websocket'))
 
 function validate(username, password, req, reply, done) {
   if (
@@ -135,10 +136,15 @@ fastify.after(() => {
   }
   fastify.get('/', async (req, reply) => {
     const users = await User.findAll({ raw: true })
-    await reply.view('index.ejs', { users: users })
+    await reply.view('index.ejs', { users: users, url: process.env.WEB_URL })
   })
   fastify.get('/favicon.ico', async (req, reply) => {
     await reply.sendFile('favicon.ico')
+  })
+  fastify.get('/ws', { websocket: true }, (socket, req) => {
+    socket.on('changeState', (msg) => {
+
+    })
   })
 })
 
@@ -424,6 +430,10 @@ ipcMain.handle('changeState', async (e, uid) => {
   await sendLine(
     `🚪 ${user.name}さんを${user.state ? '入室' : '退室'}に変更しました`
   )
+  const servers = fastify.websocketServer.clients
+  servers.forEach((client) => {
+    client.send(JSON.stringify({ type: "state", user: { name: user.name, state: user.state } }))
+  })
   win.webContents.reloadIgnoringCache()
 })
 

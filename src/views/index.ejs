@@ -83,7 +83,7 @@
               <td>
                 <%= user.state===0 ? "退室" : "入室" %>
               </td>
-              <td>
+              <td id="last">
                 <%= user.state===0 ? "00:00:00" : getHourDiff(new Date(), new Date(user.last)) %>
               </td>
             </tr>
@@ -91,6 +91,64 @@
       </tbody>
     </table>
   </div>
+  <script>
+    function getHourDiff(d1, d2) {let diff=d1.getTime() - d2.getTime(); let diffHour=diff / (1000 * 60 * 60); let
+          diffMinute=(diffHour - Math.floor(diffHour)) * 60; let diffSecond=(diffMinute - Math.floor(diffMinute)) * 60;
+          return ('00' + Math.floor(diffHour)).slice(-2) + ':' + ('00' + Math.floor(diffMinute)).slice(-2) + ':' + ('00'
+          + Math.round(diffSecond)).slice(-2); }
+    const times = document.querySelectorAll('#last');
+    const intervals = [];
+    for (let time of times) {
+      if (time.textContent.trim() !== '00:00:00') {
+        const interval = setInterval(() => {
+          const [hour, minute, second] = time.textContent.split(':').map(Number);
+          if (second === 59) {
+            if (minute === 59) {
+              time.textContent = `${('00' + (hour + 1)).slice(-2)}:00:00`;
+            } else {
+              time.textContent = `${('00' + hour).slice(-2)}:${('00' + (minute + 1)).slice(-2)}:00`;
+            }
+          } else {
+            time.textContent = `${('00' + hour).slice(-2)}:${('00' + minute).slice(-2)}:${('00' + (second + 1)).slice(-2)}`;
+          }
+        }, 1000);
+        intervals.push({interval: interval, userName: time.previousElementSibling.previousElementSibling.textContent.trim()});
+      }
+    }
+    const ws = new WebSocket('ws://<%= url %>/ws');
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      const users = document.querySelectorAll('tbody tr');
+      for (let user of users) {
+        if (user.firstElementChild.textContent.trim() === data.user.name) {
+          user.firstElementChild.nextElementSibling.textContent = data.user.state ? "入室" : "退室";
+          user.firstElementChild.nextElementSibling.nextElementSibling.textContent = data.user.state ? getHourDiff(new Date(), new Date(data.last)) : "00:00:00";
+          if (data.user.state) {
+            const time = user.firstElementChild.nextElementSibling.nextElementSibling;
+            time.textContent = "00:00:00"
+            const interval = setInterval(() => {
+              const [hour, minute, second] = time.textContent.trim().split(':').map(Number);
+              if (second === 59) {
+                if (minute === 59) {
+                  time.textContent = `${('00' + (hour + 1)).slice(-2)}:00:00`;
+                } else {
+                  time.textContent = `${('00' + hour).slice(-2)}:${('00' + (minute + 1)).slice(-2)}:00`;
+                }
+              } else {
+                time.textContent = `${('00' + hour).slice(-2)}:${('00' + minute).slice(-2)}:${('00' + (second + 1)).slice(-2)}`;
+              }
+            }, 1000);
+            intervals.push({interval: interval, userName: data.user.name});
+          } else {
+            const time = user.firstElementChild.nextElementSibling.nextElementSibling;
+            time.textContent = "00:00:00";
+            const interval = intervals.find((interval) => interval.userName === user.firstElementChild.textContent.trim());
+            clearInterval(interval.interval);
+          }
+        }
+      }
+    };
+  </script>
 </body>
 
 </html>
