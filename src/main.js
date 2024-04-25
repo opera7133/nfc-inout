@@ -236,7 +236,7 @@ function createWindow() {
 
 function readCard() {
   let pyshell = new PythonShell(path.join(__dirname, 'readcard.py'), {
-    pythonPath: "/opt/homebrew/bin/python3.11"
+    pythonPath: process.env.PYTHON_PATH,
   })
   pyshell.on('message', async (message) => {
     try {
