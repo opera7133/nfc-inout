@@ -115,7 +115,7 @@
         intervals.push({interval: interval, userName: time.previousElementSibling.previousElementSibling.textContent.trim()});
       }
     }
-    const ws = new WebSocket('ws://<%= url %>/ws');
+    const ws = new WebSocket('<%= url %>/ws');
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
       const users = document.querySelectorAll('tbody tr');
