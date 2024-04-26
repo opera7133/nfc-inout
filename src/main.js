@@ -86,7 +86,6 @@ const Card = sequelize.define(
     idm: {
       type: DataTypes.STRING(16),
       allowNull: false,
-      unique: true,
     },
     name: {
       type: DataTypes.STRING,
