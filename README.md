@@ -18,6 +18,12 @@ FelicaとElectronで入退室管理
 
 また、`pip3 install nfcpy`（Windowsの場合はpip）でnfcpyをインストールします。
 
+> [!NOTE]
+> RC-S300を利用している場合、nfcpyではなくpyscardを使用します。
+> インストール方法は[こちら](https://github.com/LudovicRousseau/pyscard/blob/master/INSTALL.md)
+>
+> また、起動時に設定からRC-S300を有効化してください。
+
 ### 4. ビルド
 
 windows向けにビルドする場合は`npm run build:win`、linux向けは`npm run build:linux`を実行します。

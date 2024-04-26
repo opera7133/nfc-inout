@@ -4,7 +4,7 @@ const { app, dialog, BrowserWindow, ipcMain, shell } = require('electron')
 const path = require('path')
 const ULID = require('ulid')
 const axios = require('axios')
-const sound = require('sound-play')
+const player = require('node-wav-player');
 const { Sequelize, DataTypes } = require('sequelize')
 const fastify = require('fastify')()
 const { PythonShell } = require('python-shell')
@@ -27,6 +27,7 @@ const store = new Store()
 
 if (!store.get('settings')) {
   store.set('settings', {
+    rcs300: false,
     debug: false,
     darkmode: false,
     sound: true,
@@ -141,9 +142,7 @@ fastify.after(() => {
     await reply.sendFile('favicon.ico')
   })
   fastify.get('/ws', { websocket: true }, (socket, req) => {
-    socket.on('changeState', (msg) => {
-
-    })
+    socket.on('changeState', (msg) => {})
   })
 })
 
@@ -203,10 +202,10 @@ const sendLine = async (content) => {
   }
 }
 
-const playSound = (file) => {
+const playSound = async (file) => {
   const status = store.get('settings.sound') || false
   if (status) {
-    sound.play(path.join(__dirname, file))
+    await player.play({path: path.join(__dirname, file)})
   }
 }
 
@@ -235,13 +234,21 @@ function createWindow() {
 }
 
 function readCard() {
-  let pyshell = new PythonShell(path.join(__dirname, 'readcard.py'), {
-    pythonPath: process.env.PYTHON_PATH,
-  })
+  const rcs300 = store.get('settings.rcs300') || false
+  let pyshell
+  if (rcs300) {
+    pyshell = new PythonShell(path.join(__dirname, 'readcard_300.py'), {
+      pythonPath: process.env.PYTHON_PATH,
+    })
+  } else {
+    pyshell = new PythonShell(path.join(__dirname, 'readcard.py'), {
+      pythonPath: process.env.PYTHON_PATH,
+    })
+  }
   pyshell.on('message', async (message) => {
     try {
       if (mode === 'register') {
-        playSound('success.mp3')
+        await playSound('success.mp3')
         if (registerData.type === 'create') {
           const newUser = await User.create({
             id: ULID.ulid(),
@@ -277,7 +284,7 @@ function readCard() {
         win.webContents.send('callback', true)
         mode = 'read'
       } else if (mode === 'reset') {
-        playSound('success.mp3')
+        await playSound('success.mp3')
         const deleteCard = await Card.findOne({
           where: { idm: message },
         })
@@ -306,7 +313,7 @@ function readCard() {
           })
           if (user.id) {
             win.webContents.send('auth', { name: user.name })
-            playSound('success.mp3')
+            await playSound('success.mp3')
             if (!user.state) {
               user.last = new Date()
             }
@@ -346,7 +353,7 @@ function readCard() {
       }
     } catch (err) {
       console.error(`error`, err)
-      playSound('error.mp3')
+      await playSound('error.mp3')
       win.webContents.send('callback', false)
       mode = 'read'
     }
@@ -445,7 +452,12 @@ ipcMain.handle('changeState', async (e, uid) => {
   )
   const servers = fastify.websocketServer.clients
   servers.forEach((client) => {
-    client.send(JSON.stringify({ type: "state", user: { name: user.name, state: user.state } }))
+    client.send(
+      JSON.stringify({
+        type: 'state',
+        user: { name: user.name, state: user.state },
+      })
+    )
   })
   win.webContents.reloadIgnoringCache()
 })

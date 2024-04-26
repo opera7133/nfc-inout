@@ -22,6 +22,10 @@
       <input class="form-check-input" type="checkbox" role="switch" id="soundEffectCheck">
       <label class="form-check-label" for="soundEffectCheck">効果音</label>
     </div>
+    <div class="form-check form-switch">
+      <input class="form-check-input" type="checkbox" role="switch" id="rcs300Check">
+      <label class="form-check-label" for="rcs300Check">RC-S300</label>
+    </div>
     <h5>通知</h5>
     <p><code>.env</code>で設定されている場合のみ使用可能です。</p>
     <div>
@@ -52,6 +56,7 @@
       }
       document.getElementById("darkmodeCheck").checked = settings.darkmode || false
       document.getElementById("soundEffectCheck").checked = settings.sound || false
+      document.getElementById("rcs300Check").checked = settings.rcs300 || false
       document.getElementById("discordWebhook").value = settings.notify.discord || ""
       document.getElementById("lineToken").value = settings.notify.line.token || ""
       document.getElementById("lineUser").value = settings.notify.line.user || ""
@@ -59,10 +64,11 @@
     async function saveSettings() {
       const darkmode = document.getElementById("darkmodeCheck").checked
       const sound = document.getElementById("soundEffectCheck").checked
+      const rcs300 = document.getElementById("rcs300Check").checked
       const discordHook = document.getElementById("discordWebhook").value
       const lineToken = document.getElementById("lineToken").value
       const lineUser = document.getElementById("lineUser").value
-      const res = await el.setSettings({ darkmode: darkmode, sound: sound, notify: { discord: discordHook, line: { token: lineToken, user: lineUser } } })
+      const res = await el.setSettings({ darkmode: darkmode, sound: sound, rcs300: rcs300, notify: { discord: discordHook, line: { token: lineToken, user: lineUser } } })
       if (res) {
         window.close()
       }
