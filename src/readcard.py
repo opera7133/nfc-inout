@@ -1,7 +1,6 @@
 import nfc
 import binascii
 import sys
-from time import sleep
 
 try:
     clf = nfc.ContactlessFrontend('usb')
@@ -9,5 +8,6 @@ try:
     clf.close()
     idm = binascii.hexlify(tag.idm)
     idm = idm.decode('utf-8').upper()
+    print(idm)
 except Exception as e:
     sys.exit(1)
