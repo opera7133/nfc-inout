@@ -360,6 +360,11 @@ function readCard() {
             setTimeout(() => {
               mode = 'read'
             }, 2000)
+          } else {
+            win.webContents.send(
+              'debug',
+              `\nidm: ${message}\nstate: not registered`
+            )
           }
         }
       }

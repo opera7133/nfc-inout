@@ -1,6 +1,6 @@
 {
   "name": "nfc-inout",
-  "version": "1.2.4",
+  "version": "1.2.5",
   "description": "Manage entry/exit with Felica and Electron",
   "main": "src/main.js",
   "scripts": {
