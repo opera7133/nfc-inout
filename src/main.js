@@ -144,8 +144,7 @@ fastify.after(() => {
     socket.on('changeState', (msg) => {})
   })
   fastify.post('/api/change_state', async (req, reply) => {
-    console.log(req)
-    if (!req.body.name || !req.body.state || req.body.name === '' || req.body.state === '') {
+    if (!req.body.name || req.body.state === null || req.body.name === '') {
       return reply.code(400).send({ message: 'Bad Request' })
     }
     const servers = fastify.websocketServer.clients
