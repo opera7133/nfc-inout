@@ -156,6 +156,12 @@ fastify.after(() => {
     }
     return reply.code(200).send({ message: 'OK' })
   })
+  fastify.post('/api/post_message', async (req, reply) => {
+    const data = JSON.parse(req.body)
+    await sendDiscord(data.message)
+    await sendLine(data.message)
+    return reply.code(200).send({ message: 'OK' })
+  })
 })
 
 const start = async () => {
