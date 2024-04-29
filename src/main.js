@@ -143,7 +143,7 @@ fastify.after(() => {
   fastify.get('/ws', { websocket: true }, (socket, req) => {
     socket.on('changeState', (msg) => {})
   })
-  fastify.post('/api/changeState', async (req, reply) => {
+  fastify.post('/api/change_state', async (req, reply) => {
     if (!req.body.name || !req.body.state || req.body.name === '' || req.body.state === '') {
       return reply.code(400).send({ message: 'Bad Request' })
     }
