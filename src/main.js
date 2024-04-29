@@ -144,6 +144,7 @@ fastify.after(() => {
     socket.on('changeState', (msg) => {})
   })
   fastify.post('/api/change_state', async (req, reply) => {
+    console.log(req)
     if (!req.body.name || !req.body.state || req.body.name === '' || req.body.state === '') {
       return reply.code(400).send({ message: 'Bad Request' })
     }
