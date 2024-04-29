@@ -144,15 +144,13 @@ fastify.after(() => {
     socket.on('changeState', (msg) => {})
   })
   fastify.post('/api/change_state', async (req, reply) => {
-    if (!req.body.name || req.body.state === null || req.body.name === '') {
-      return reply.code(400).send({ message: 'Bad Request' })
-    }
+    const data = JSON.parse(req.body)
     const servers = fastify.websocketServer.clients
     for (const client of servers) {
       client.send(
         JSON.stringify({
           type: 'state',
-          user: { name: req.body.name, state: req.body.state },
+          user: { name: data.name, state: data.state },
         })
       )
     }
