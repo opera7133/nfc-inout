@@ -143,6 +143,20 @@ fastify.after(() => {
   fastify.get('/ws', { websocket: true }, (socket, req) => {
     socket.on('changeState', (msg) => {})
   })
+  fastify.post('/api/changeState', async (req, reply) => {
+    if (!req.body.name || !req.body.state || req.body.name === '' || req.body.state === '') {
+      return reply.code(400).send({ message: 'Bad Request' })
+    }
+    const servers = fastify.websocketServer.clients
+    for (const client of servers) {
+      client.send(
+        JSON.stringify({
+          type: 'state',
+          user: { name: req.body.name, state: req.body.state },
+        })
+      )
+    }
+  })
 })
 
 const start = async () => {
