@@ -156,6 +156,7 @@ fastify.after(() => {
         })
       )
     }
+    return reply.code(200).send({ message: 'OK' })
   })
 })
 
